@@ -12,7 +12,7 @@ namespace ctf {
 
 struct Instruction {
     uint64_t address;
-    std::vector<unsigned char> bytes;
+    std::string bytes;
     std::string assembly;
 };
 

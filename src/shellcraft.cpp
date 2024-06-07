@@ -86,9 +86,7 @@ static std::pair<ks_arch, ks_mode> convert_arch_to_ks(ctf::Architecture arch) {
 namespace ctf {
 
 std::string disassemble(
-    std::span<unsigned char> code,
-    Architecture arch,
-    std::optional<size_t> address
+    std::string_view code, Architecture arch, std::optional<size_t> address
 ) {
     csh handle    = 0;
     cs_insn *insn = nullptr;
@@ -100,7 +98,12 @@ std::string disassemble(
         throw std::runtime_error("Bad assembly entry");
     std::string ret;
     count = cs_disasm(
-        handle, code.data(), code.size(), address ? *address : 0, 0, &insn
+        handle,
+        (const unsigned char *)code.data(),
+        code.size(),
+        address ? *address : 0,
+        0,
+        &insn
     );
     if (count > 0) {
         for (auto j = 0; j < count; j++) {
@@ -120,20 +123,18 @@ std::string disassemble(
     return ret;
 }
 
-std::string disassemble(
-    std::span<unsigned char> code, std::optional<size_t> address
-) {
+std::string disassemble(std::string_view code, std::optional<size_t> address) {
     return disassemble(code, CONTEXT.arch, address);
 }
 
-std::vector<unsigned char> assemble(const char *code, Architecture arch) {
+std::string assemble(const char *code, Architecture arch) {
     ks_engine *ks         = nullptr;
     ks_err err            = {};
     size_t count          = 0;
     unsigned char *encode = nullptr;
     size_t size           = 0;
     const auto [a, m]     = convert_arch_to_ks(arch);
-    std::vector<unsigned char> ret;
+    std::string ret;
     err = ks_open(a, m, &ks);
     if (err != KS_ERR_OK) {
         throw std::runtime_error("Couldn't assemble entry");
@@ -154,15 +155,11 @@ std::vector<unsigned char> assemble(const char *code, Architecture arch) {
     return ret;
 }
 
-std::vector<unsigned char> assemble(const char *code) {
-    return assemble(code, CONTEXT.arch);
-}
+std::string assemble(const char *code) { return assemble(code, CONTEXT.arch); }
 
-std::vector<unsigned char> linux_sh_x64() {
+std::string linux_sh_x64() {
     return assemble(LINUX_X64_SH, Architecture::X86_64);
 }
 
-std::vector<unsigned char> linux_sh_x86() {
-    return assemble(LINUX_X86_SH, Architecture::X86);
-}
+std::string linux_sh_x86() { return assemble(LINUX_X86_SH, Architecture::X86); }
 } // namespace ctf

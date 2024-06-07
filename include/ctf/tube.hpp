@@ -9,14 +9,14 @@ namespace ctf {
 
 class Tube {
   public:
-    virtual void writeln(std::span<const unsigned char> msg) = 0;
-    virtual void write(std::span<const unsigned char> msg)   = 0;
-    virtual void write(unsigned char msg)                    = 0;
-    virtual std::vector<unsigned char> readn(int n)          = 0;
-    virtual std::vector<unsigned char> readln()              = 0;
-    virtual std::vector<unsigned char> readall()             = 0;
-    virtual void interactive()                               = 0;
-    virtual ~Tube()                                          = 0;
+    virtual void writeln(std::string_view msg) = 0;
+    virtual void write(std::string_view msg)   = 0;
+    virtual void write(char msg)               = 0;
+    virtual std::string readn(int n)           = 0;
+    virtual std::string readln()               = 0;
+    virtual std::string readall()              = 0;
+    virtual void interactive()                 = 0;
+    virtual ~Tube()                            = 0;
 };
 
 class Process : public Tube {
@@ -26,12 +26,12 @@ class Process : public Tube {
 
   public:
     Process(std::string_view args, std::string_view env = "");
-    void writeln(std::span<const unsigned char> msg) override;
-    void write(std::span<const unsigned char> msg) override;
-    void write(unsigned char msg) override;
-    std::vector<unsigned char> readn(int n) override;
-    std::vector<unsigned char> readln() override;
-    std::vector<unsigned char> readall() override;
+    void writeln(std::string_view msg) override;
+    void write(std::string_view msg) override;
+    void write(char msg) override;
+    std::string readn(int n) override;
+    std::string readln() override;
+    std::string readall() override;
     void interactive() override;
     int exit_status();
 };
@@ -42,12 +42,12 @@ class Remote : public Tube {
 
   public:
     Remote(std::string_view url, unsigned short port);
-    void write(std::span<const unsigned char> msg) override;
-    void writeln(std::span<const unsigned char> msg) override;
-    void write(unsigned char msg) override;
-    std::vector<unsigned char> readn(int n) override;
-    std::vector<unsigned char> readln() override;
-    std::vector<unsigned char> readall() override;
+    void write(std::string_view msg) override;
+    void writeln(std::string_view msg) override;
+    void write(char msg) override;
+    std::string readn(int n) override;
+    std::string readln() override;
+    std::string readall() override;
     void interactive() override;
 };
 

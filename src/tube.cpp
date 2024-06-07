@@ -82,8 +82,8 @@ struct Process::Impl {
 Process::Process(std::string_view args, std::string_view env)
     : pimpl(new Process::Impl(args, env)) {}
 
-std::vector<unsigned char> Process::readn(int n) {
-    std::vector<unsigned char> ret(n, 0);
+std::string Process::readn(int n) {
+    std::string ret(n, 0);
     int i  = 0;
     int ch = 0;
     while (EOF != (ch = fgetc(pimpl->subprocess.stdout_file)) && i < n) {
@@ -93,8 +93,8 @@ std::vector<unsigned char> Process::readn(int n) {
     return ret;
 }
 
-std::vector<unsigned char> Process::readln() {
-    std::vector<unsigned char> ret;
+std::string Process::readln() {
+    std::string ret;
     int ch = 0;
     do {
         ch = fgetc(pimpl->subprocess.stdout_file);
@@ -105,8 +105,8 @@ std::vector<unsigned char> Process::readln() {
     return ret;
 }
 
-std::vector<unsigned char> Process::readall() {
-    std::vector<unsigned char> ret;
+std::string Process::readall() {
+    std::string ret;
     int ch = 0;
     do {
         ch = fgetc(pimpl->subprocess.stdout_file);
@@ -115,20 +115,20 @@ std::vector<unsigned char> Process::readall() {
     return ret;
 }
 
-void Process::write(std::span<const unsigned char> message) {
+void Process::write(std::string_view message) {
     for (auto e : message)
         (void)fputc((int)e, pimpl->subprocess.stdin_file);
     (void)fflush(pimpl->subprocess.stdin_file);
 }
 
-void Process::writeln(std::span<const unsigned char> message) {
+void Process::writeln(std::string_view message) {
     for (auto e : message)
         (void)fputc((int)e, pimpl->subprocess.stdin_file);
     (void)fputc('\n', pimpl->subprocess.stdin_file);
     (void)fflush(pimpl->subprocess.stdin_file);
 }
 
-void Process::write(unsigned char message) {
+void Process::write(char message) {
     (void)fputc((int)message, pimpl->subprocess.stdin_file);
     (void)fflush(pimpl->subprocess.stdin_file);
 }
@@ -184,8 +184,8 @@ struct Remote::Impl {
 Remote::Remote(std::string_view url, unsigned short port)
     : pimpl(std::make_shared<Remote::Impl>(url, port)) {}
 
-std::vector<unsigned char> Remote::readn(int n) {
-    std::vector<unsigned char> ret(n, 0);
+std::string Remote::readn(int n) {
+    std::string ret(n, 0);
     asio::error_code ec;
     asio::read(
         pimpl->socket_, asio::buffer(ret), asio::transfer_exactly(n), ec
@@ -193,34 +193,32 @@ std::vector<unsigned char> Remote::readn(int n) {
     return ret;
 }
 
-std::vector<unsigned char> Remote::readln() {
-    std::vector<unsigned char> ret;
+std::string Remote::readln() {
+    std::string ret;
     asio::error_code ec;
     asio::read_until(pimpl->socket_, asio::dynamic_buffer(ret), '\n', ec);
     return ret;
 }
 
-std::vector<unsigned char> Remote::readall() {
-    std::vector<unsigned char> ret;
+std::string Remote::readall() {
+    std::string ret;
     asio::error_code ec;
-    asio::read(
-        pimpl->socket_, asio::dynamic_buffer(ret), ec
-    );
+    asio::read(pimpl->socket_, asio::dynamic_buffer(ret), ec);
     return ret;
 }
 
-void Remote::writeln(std::span<const unsigned char> message) {
+void Remote::writeln(std::string_view message) {
     asio::write(pimpl->socket_, asio::buffer(message));
-    std::array<unsigned char, 1> buf = {'\n'};
+    std::array<char, 1> buf = {'\n'};
     asio::write(pimpl->socket_, asio::buffer(buf));
 }
 
-void Remote::write(std::span<const unsigned char> message) {
+void Remote::write(std::string_view message) {
     asio::write(pimpl->socket_, asio::buffer(message));
 }
 
-void Remote::write(unsigned char message) {
-    std::array<unsigned char, 1> buf = {message};
+void Remote::write(char message) {
+    std::array<char, 1> buf = {message};
     asio::write(pimpl->socket_, asio::buffer(buf));
 }
 
@@ -265,9 +263,7 @@ int Gdb::attach(const Process &pp, std::string_view gdb_server_args) {
     );
     auto proc     = Process{gdb_args.c_str()};
     auto to_write = fmt::format("attach {}\n", pp.pimpl->subprocess.child);
-    proc.write(std::span<const unsigned char>(
-        reinterpret_cast<unsigned char *>(to_write.data()), to_write.size()
-    ));
+    proc.write(to_write);
     return p.pimpl->subprocess.child;
 }
 #endif

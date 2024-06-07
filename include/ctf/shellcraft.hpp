@@ -9,21 +9,21 @@
 namespace ctf {
 
 std::string disassemble(
-    std::span<unsigned char> code,
+    std::string_view code,
     Architecture arch,
     std::optional<size_t> address = std::nullopt
 );
 
 std::string disassemble(
-    std::span<unsigned char> code, std::optional<size_t> address = std::nullopt
+    std::string_view code, std::optional<size_t> address = std::nullopt
 );
 
-std::vector<unsigned char> assemble(const char *code, Architecture arch);
+std::string assemble(const char *code, Architecture arch);
 
-std::vector<unsigned char> assemble(const char *code);
+std::string assemble(const char *code);
 
-std::vector<unsigned char> linux_sh_x64();
+std::string linux_sh_x64();
 
-std::vector<unsigned char> linux_sh_x86();
+std::string linux_sh_x86();
 
 } // namespace ctf

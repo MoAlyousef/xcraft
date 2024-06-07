@@ -19,7 +19,7 @@ static bool is_printable_ascii(unsigned char c) {
     return c >= MIN_PRINTABLE_CHAR && c <= MAX_PRINTABLE_CHAR;
 }
 address_map extract_strings_from_section(
-    std::span<const uint8_t> content,
+    std::span<unsigned char> content,
     size_t virtual_address,
     size_t min_length = 4
 ) {
@@ -60,7 +60,12 @@ address_map extract_strings(const LIEF::Binary &binary, size_t min_length = 4) {
 
     for (const auto &section : binary.sections()) {
         auto section_strings = extract_strings_from_section(
-            section.content(), section.virtual_address(), min_length
+            std::span<unsigned char>(
+                (unsigned char *)section.content().data(),
+                section.content().size()
+            ),
+            section.virtual_address(),
+            min_length
         );
         all_strings.insert(section_strings.begin(), section_strings.end());
     }

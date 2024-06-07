@@ -64,7 +64,7 @@ static std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
                         for (size_t j = start + 1; j <= i; j++) {
                             Instruction instruction;
                             instruction.address = insn[j].address;
-                            instruction.bytes   = std::vector(
+                            instruction.bytes   = std::string(
                                 insn[j].bytes, insn[j].bytes + insn[j].size
                             );
                             instruction.assembly = insn[j].mnemonic;

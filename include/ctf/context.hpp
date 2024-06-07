@@ -6,7 +6,7 @@
 namespace ctf {
 struct Context {
     Architecture arch    = Architecture::X86_64;
-    std::endian endian   = std::endian::little;
+    Endian endian        = Endian::Little;
     Os os                = Os::Linux;
     const char *terminal = "x-terminal-emulator -e";
     Context() noexcept;

@@ -18,25 +18,25 @@ constexpr std::array<T, N> span_to_array(std::span<const T, N> span) {
 
 namespace ctf {
 
-template <class T, std::endian E>
+template <class T, Endian E>
     requires(std::is_integral_v<T>)
 std::array<unsigned char, sizeof(T)> p(T val) {
     auto s = std::span<const unsigned char, sizeof(T)>(
         reinterpret_cast<unsigned char *>(&val), sizeof(T)
     );
     std::array<unsigned char, sizeof(T)> a = span_to_array(s);
-    if (E == std::endian::big)
+    if (E == Endian::Big)
         std::reverse(a.begin(), a.end());
     return a;
 }
 
-template <class T, std::endian E>
+template <class T, Endian E>
     requires(std::is_integral_v<T>)
 T up(std::span<const unsigned char> a) {
     std::vector<unsigned char> v(a.begin(), a.end());
     for (size_t i = v.size(); i < sizeof(T); i++)
         v.push_back(0);
-    if (E == std::endian::big) {
+    if (E == Endian::Big) {
         std::reverse(v.begin(), v.end());
     }
     return *reinterpret_cast<T *>(v.data());
@@ -44,65 +44,53 @@ T up(std::span<const unsigned char> a) {
 
 template std::array<unsigned char, sizeof(uint32_t)> p<
     uint32_t,
-    std::endian::little>(const uint32_t);
+    Endian::Little>(const uint32_t);
 
 template std::array<unsigned char, sizeof(uint64_t)> p<
     uint64_t,
-    std::endian::little>(const uint64_t);
+    Endian::Little>(const uint64_t);
 
-template std::array<unsigned char, sizeof(uint32_t)> p<
-    uint32_t,
-    std::endian::big>(const uint32_t);
-
-template std::array<unsigned char, sizeof(uint64_t)> p<
-    uint64_t,
-    std::endian::big>(const uint64_t);
-
-template std::array<unsigned char, sizeof(int32_t)> p<
-    int32_t,
-    std::endian::little>(const int32_t);
-
-template std::array<unsigned char, sizeof(int64_t)> p<
-    int64_t,
-    std::endian::little>(const int64_t);
-
-template std::array<unsigned char, sizeof(int32_t)> p<
-    int32_t,
-    std::endian::big>(const int32_t);
-
-template std::array<unsigned char, sizeof(int64_t)> p<
-    int64_t,
-    std::endian::big>(const int64_t);
-
-template uint32_t up<uint32_t, std::endian::little>(
-    std::span<const unsigned char> a
+template std::array<unsigned char, sizeof(uint32_t)> p<uint32_t, Endian::Big>(
+    const uint32_t
 );
 
-template uint64_t up<uint64_t, std::endian::little>(
-    std::span<const unsigned char> a
+template std::array<unsigned char, sizeof(uint64_t)> p<uint64_t, Endian::Big>(
+    const uint64_t
 );
 
-template uint32_t up<uint32_t, std::endian::big>(
-    std::span<const unsigned char> a
+template std::array<unsigned char, sizeof(int32_t)> p<int32_t, Endian::Little>(
+    const int32_t
 );
 
-template uint64_t up<uint64_t, std::endian::big>(
-    std::span<const unsigned char> a
+template std::array<unsigned char, sizeof(int64_t)> p<int64_t, Endian::Little>(
+    const int64_t
 );
 
-template int32_t up<int32_t, std::endian::little>(
-    std::span<const unsigned char> a
+template std::array<unsigned char, sizeof(int32_t)> p<int32_t, Endian::Big>(
+    const int32_t
 );
 
-template int64_t up<int64_t, std::endian::little>(
-    std::span<const unsigned char> a
+template std::array<unsigned char, sizeof(int64_t)> p<int64_t, Endian::Big>(
+    const int64_t
 );
 
-template int32_t up<int32_t, std::endian::big>(std::span<const unsigned char> a
+template uint32_t up<uint32_t, Endian::Little>(std::span<const unsigned char> a
 );
 
-template int64_t up<int64_t, std::endian::big>(std::span<const unsigned char> a
+template uint64_t up<uint64_t, Endian::Little>(std::span<const unsigned char> a
 );
+
+template uint32_t up<uint32_t, Endian::Big>(std::span<const unsigned char> a);
+
+template uint64_t up<uint64_t, Endian::Big>(std::span<const unsigned char> a);
+
+template int32_t up<int32_t, Endian::Little>(std::span<const unsigned char> a);
+
+template int64_t up<int64_t, Endian::Little>(std::span<const unsigned char> a);
+
+template int32_t up<int32_t, Endian::Big>(std::span<const unsigned char> a);
+
+template int64_t up<int64_t, Endian::Big>(std::span<const unsigned char> a);
 
 void db(
     size_t t,
@@ -144,7 +132,7 @@ std::vector<unsigned char> cyclic_alphabet_impl() noexcept {
     std::iota(v.begin(), v.end(), 0);
     auto cyclicimpl = cyclic_impl(v, 4);
     std::vector<unsigned char> z;
-    z.reserve(cyclicimpl.size() * sizeof(size_t));
+    z.reserve(cyclicimpl.size());
     for (auto elem : cyclicimpl) {
         z.push_back((unsigned char)elem + 'a');
     }
@@ -154,7 +142,7 @@ std::vector<unsigned char> cyclic_alphabet_impl() noexcept {
 const std::vector<unsigned char> CYCLIC = cyclic_alphabet_impl();
 
 std::vector<unsigned char> cyclic(size_t len) {
-    return { CYCLIC.begin(), CYCLIC.begin() + (long)len };
+    return {CYCLIC.begin(), CYCLIC.begin() + (long)len};
 }
 
 template <class T>

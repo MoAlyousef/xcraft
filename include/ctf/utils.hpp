@@ -3,6 +3,7 @@
 #include <array>
 #include <bit>
 #include <cstddef>
+#include <ctf/enums.hpp>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -31,11 +32,11 @@ constexpr std::vector<T> from_ranges(
     return v;
 }
 
-template <class T, std::endian E = std::endian::native>
+template <class T, Endian E = Endian::Little>
     requires(std::is_integral_v<T>)
 std::array<unsigned char, sizeof(T)> p(const T val);
 
-template <class T, std::endian E = std::endian::native>
+template <class T, Endian E = Endian::Little>
     requires(std::is_integral_v<T>)
 T up(std::span<const unsigned char> a);
 

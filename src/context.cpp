@@ -12,7 +12,7 @@ Context::Context() noexcept {
     os       = Os::Darwin;
     terminal = " open -b com.apple.terminal";
 #elif defined(__linux__)
-    os       = Os::Linux;
+    os = Os::Linux;
 #else
     os       = Os::Unix;
     terminal = "xterm -e";
@@ -29,9 +29,9 @@ Context::Context() noexcept {
 #endif
     // NOLINTEND
     if (std::endian::native == std::endian::little)
-        endian = std::endian::little;
+        endian = Endian::Little;
     else
-        endian = std::endian::big;
+        endian = Endian::Big;
 }
 
 Context CONTEXT;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <bit>
 #include "enums.hpp"
+#include <bit>
 #include <filesystem>
 #include <initializer_list>
 #include <string_view>
@@ -9,7 +9,7 @@
 #include <vector>
 
 namespace fs      = std::filesystem;
-using address_map = std::unordered_map<std::string, size_t>;
+using address_map = std::unordered_map<std::string, uint64_t>;
 
 namespace ctf {
 class Binary {
@@ -22,10 +22,11 @@ class Binary {
   public:
     Binary(fs::path);
     [[nodiscard]] fs::path path() const;
+    [[nodiscard]] Bits bits() const;
     [[nodiscard]] address_map &symbols() const;
     [[nodiscard]] address_map &strings() const;
     std::vector<size_t> search(std::initializer_list<std::string_view> seq);
-    [[nodiscard]] std::endian endianness() const;
+    [[nodiscard]] Endian endianness() const;
     [[nodiscard]] Architecture arch() const;
     [[nodiscard]] bool executable_stack() const;
     [[nodiscard]] bool position_independent() const;

@@ -54,7 +54,8 @@ PE::PE(fs::path path)
           static_cast<LIEF::Binary *>(Binary::bin())
       ))) {
     pimpl->init();
-    fmt::println("PE:     {}", fs::canonical(Binary::path()).string());
+    fmt::println("PE:      {}", fs::canonical(Binary::path()).string());
+    fmt::println("Bits:    {}", static_cast<int>(bits()));
     fmt::println("Arch:    {}", magic_enum::enum_name(arch()));
     fmt::println("Endian:  {}", magic_enum::enum_name(endianness()));
     fmt::println("Static:  {}", pimpl->dynamic);

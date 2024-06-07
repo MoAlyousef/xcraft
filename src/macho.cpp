@@ -63,6 +63,7 @@ MachO::MachO(fs::path path)
       ))) {
     pimpl->init();
     fmt::println("MachO:   {}", fs::canonical(Binary::path()).string());
+    fmt::println("Bits:    {}", static_cast<int>(bits()));
     fmt::println("Arch:    {}", magic_enum::enum_name(arch()));
     fmt::println("Endian:  {}", magic_enum::enum_name(endianness()));
     fmt::println("Static:  {}", pimpl->dynamic);

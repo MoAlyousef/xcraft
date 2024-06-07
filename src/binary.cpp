@@ -68,14 +68,11 @@ address_map extract_strings(const LIEF::Binary &binary, size_t min_length = 4) {
     return all_strings;
 }
 
-constexpr size_t BITS32 = 32;
-constexpr size_t BITS64 = 32;
-
 struct Binary::Impl {
     fs::path path_;
     std::unique_ptr<LIEF::Binary> bin;
-    std::endian endian      = std::endian::little;
-    size_t bits             = BITS64;
+    Endian endian           = Endian::Little;
+    Bits bits               = Bits::Bits64;
     bool has_stack_canaries = false;
     size_t address_         = 0;
     address_map symbols;
@@ -85,10 +82,10 @@ struct Binary::Impl {
             throw std::runtime_error(
                 fmt::format("File doesn't exist: {}", path_.string())
             );
-        bits   = bin->header().is_64() ? BITS64 : BITS32;
+        bits   = bin->header().is_64() ? Bits::Bits64 : Bits::Bits32;
         endian = bin->header().endianness() == LIEF::ENDIAN_BIG
-                     ? std::endian::big
-                     : std::endian::little;
+                     ? Endian::Big
+                     : Endian::Little;
         for (const auto &s : bin->symbols()) {
             auto name = s.name();
             if (name.find("__stack_chk") == 0 ||
@@ -103,6 +100,8 @@ struct Binary::Impl {
 Binary::~Binary() = default;
 
 Binary::Binary(fs::path path) : pimpl(std::make_shared<Binary::Impl>(path)) {}
+
+Bits Binary::bits() const { return pimpl->bits; }
 
 fs::path Binary::path() const { return pimpl->path_; }
 
@@ -144,7 +143,7 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
                     std::string(insn[i].mnemonic) + " " + insn[i].op_str;
                 if (full_instruction == sequence[match_idx]) {
                     if (match_idx == 0) {
-                        first_address = (size_t)insn[i].address;
+                        first_address = insn[i].address;
                     }
                     match_idx++;
                     if (match_idx == sequence.size()) {
@@ -182,7 +181,7 @@ Architecture Binary::arch() const {
 
 bool Binary::stack_canaries() const { return pimpl->has_stack_canaries; }
 
-std::endian Binary::endianness() const { return pimpl->endian; }
+Endian Binary::endianness() const { return pimpl->endian; }
 
 size_t Binary::address() const { return pimpl->address_; }
 

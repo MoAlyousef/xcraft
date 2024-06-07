@@ -2,6 +2,16 @@
 
 namespace ctf {
 
+enum class Bits {
+    Bits32 = 32,
+    Bits64 = 64,
+};
+
+enum class Endian {
+    Little,
+    Big,
+};
+
 enum class Architecture {
     X86_64,
     X86,

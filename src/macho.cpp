@@ -92,14 +92,10 @@ address_map &MachO::iat() const {
 
 size_t MachO::set_address(size_t addr) {
     auto delta = addr - address();
-    if (!STUBS)
-        (void)stubs();
-    for (auto &[name, offset] : *STUBS) {
+    for (auto &[name, offset] : stubs()) {
         offset += delta;
     }
-    if (!IAT)
-        (void)iat();
-    for (auto &[name, offset] : *IAT) {
+    for (auto &[name, offset] : iat()) {
         offset += delta;
     }
     return Binary::set_address(addr);

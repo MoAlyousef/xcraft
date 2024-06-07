@@ -84,14 +84,10 @@ address_map &PE::iat() const {
 
 size_t PE::set_address(size_t addr) {
     auto delta = addr - address();
-    if (!ILT)
-        (void)ilt();
-    for (auto &[name, offset] : *ILT) {
+    for (auto &[name, offset] : ilt()) {
         offset += delta;
     }
-    if (!IAT)
-        (void)iat();
-    for (auto &[name, offset] : *IAT) {
+    for (auto &[name, offset] : iat()) {
         offset += delta;
     }
     return Binary::set_address(addr);

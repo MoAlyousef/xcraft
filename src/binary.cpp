@@ -191,9 +191,7 @@ size_t Binary::set_address(size_t addr) {
     for (auto &[name, offset] : pimpl->symbols) {
         offset += delta;
     }
-    if (!STRINGS)
-        (void)strings();
-    for (auto &[name, offset] : *STRINGS) {
+    for (auto &[name, offset] : strings()) {
         offset += delta;
     }
     return pimpl->address_;

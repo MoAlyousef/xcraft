@@ -138,14 +138,10 @@ address_map &ELF::plt() const {
 
 size_t ELF::set_address(size_t addr) {
     auto delta = addr - address();
-    if (!GOT)
-        (void)got();
-    for (auto &[name, offset] : *GOT) {
+    for (auto &[name, offset] : got()) {
         offset += delta;
     }
-    if (!PLT)
-        (void)plt();
-    for (auto &[name, offset] : *PLT) {
+    for (auto &[name, offset] : plt()) {
         offset += delta;
     }
     return Binary::set_address(addr);

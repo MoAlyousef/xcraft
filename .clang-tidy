@@ -1,0 +1,11 @@
+---
+Checks: 'clang-diagnostic-*,
+clang-analyzer-*,
+cppcoreguidelines-*,
+modernize-*,
+cert-*,
+-modernize-use-trailing-return-type,
+-cppcoreguidelines-pro-bounds-*,
+-cppcoreguidelines-pro-type-reinterpret-cast,
+-cppcoreguidelines-avoid-non-const-global-variables'
+HeaderFilterRegex: ''

@@ -11,14 +11,13 @@ using opt_map = std::optional<address_map>;
 
 static opt_map STRINGS = std::nullopt;
 
-constexpr unsigned char MIN_PRINTABLE_CHAR = 32;
-constexpr unsigned char MAX_PRINTABLE_CHAR = 126;
-
 static bool is_printable_ascii(unsigned char c) {
-    return c >= MIN_PRINTABLE_CHAR && c <= MAX_PRINTABLE_CHAR;
+    constexpr unsigned char min_printable_char = 32;
+    constexpr unsigned char max_printable_char = 126;
+    return c >= min_printable_char && c <= max_printable_char;
 }
 address_map extract_strings_from_section(
-    std::span<unsigned char> content,
+    std::span<const unsigned char> content,
     size_t virtual_address,
     size_t min_length = 4
 ) {
@@ -59,12 +58,7 @@ address_map extract_strings(const LIEF::Binary &binary, size_t min_length = 4) {
 
     for (const auto &section : binary.sections()) {
         auto section_strings = extract_strings_from_section(
-            std::span<unsigned char>(
-                (unsigned char *)section.content().data(),
-                section.content().size()
-            ),
-            section.virtual_address(),
-            min_length
+            section.content(), section.virtual_address(), min_length
         );
         all_strings.insert(section_strings.begin(), section_strings.end());
     }

@@ -57,4 +57,16 @@ struct Gdb {
         std::string_view pp, std::string_view gdb_server_args = ""
     );
 };
+
+template <class T, class... Args>
+    requires(std::is_base_of_v<Tube, T>)
+std::unique_ptr<Tube> uniq_tube(Args... args) {
+    return std::unique_ptr<Tube>(new T(args...));
+}
+
+template <class T, class... Args>
+    requires(std::is_base_of_v<Tube, T>)
+std::shared_ptr<Tube> shared_tube(Args... args) {
+    return std::shared_ptr<Tube>(new T(args...));
+}
 } // namespace ctf

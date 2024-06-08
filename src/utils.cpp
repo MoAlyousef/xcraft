@@ -115,7 +115,9 @@ std::string cyclic_alphabet_impl() noexcept {
     std::string z;
     z.reserve(cyclicimpl.size());
     for (auto elem : cyclicimpl) {
-        z.push_back((unsigned char)elem + 'a');
+        // NOLINTBEGIN
+        z.push_back(elem + 'a');
+        // NOLINTEND
     }
     return z;
 }
@@ -147,10 +149,6 @@ template ptrdiff_t cyclic_find<int>(int seq);
 template ptrdiff_t cyclic_find<long>(long seq);
 
 template ptrdiff_t cyclic_find<const char *>(const char *seq);
-
-std::string str(std::string_view b) {
-    return {reinterpret_cast<const char *>(&b[0]), b.size()};
-}
 
 void hex_print(std::string_view a) {
     for (auto i : a)

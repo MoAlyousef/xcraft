@@ -87,7 +87,7 @@ std::string Process::readn(int n) {
     int i  = 0;
     int ch = 0;
     while (EOF != (ch = fgetc(pimpl->subprocess.stdout_file)) && i < n) {
-        ret[i] = (unsigned char)ch;
+        ret[i] = (char)ch;
         i++;
     }
     return ret;
@@ -100,7 +100,7 @@ std::string Process::readln() {
         ch = fgetc(pimpl->subprocess.stdout_file);
         if (ch == '\n')
             break;
-        ret.push_back((unsigned char)ch);
+        ret.push_back((char)ch);
     } while (EOF != ch);
     return ret;
 }
@@ -110,7 +110,7 @@ std::string Process::readall() {
     int ch = 0;
     do {
         ch = fgetc(pimpl->subprocess.stdout_file);
-        ret.push_back((unsigned char)ch);
+        ret.push_back((char)ch);
     } while (EOF != ch);
     return ret;
 }

@@ -1,7 +1,6 @@
 #include <ctf/ctf.hpp>
 #include <exception>
 #include <iostream>
-#include <memory>
 #include <string_view>
 
 using namespace ctf;
@@ -19,9 +18,9 @@ int main(int argc, char **argv) try {
 
     using UniqTube = std::unique_ptr<Tube>;
 
-    UniqTube io =
-        local ? UniqTube(new Process("./bin/bof")) // the code from pwnable
-              : UniqTube(new Remote("pwnable.kr", PORT));
+    auto io =
+        local ? uniq_tube<Process>("./bin/bof") // the code from pwnable
+              : uniq_tube<Remote>("pwnable.kr", PORT);
 
     io->writeln(payload);
     io->interactive();

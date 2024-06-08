@@ -8,9 +8,10 @@ TEST(UtilsTest, BasicAssertions) {
     auto x = from_ranges("hello "sv, "world"sv);
     std::cout << x << std::endl;
     auto y =
-        from_ranges(cyclic(20), p<uint32_t>(0xdeadbeef), "\xbe\xba\xfe\xca"sv);
-    const char *val = "\x61\x61\x61\x61\x62\x61\x61\x61\x63\x61\x61\x61\x64\x61"
-                    "\x61\x61\x65\x61\x61\x61\xef\xbe\xad\xde\xbe\xba\xfe\xca";
+        from_ranges(cyclic(20), p<uint32_t>(0xdeadbeef), "\xbe\xba\xfe\xca");
+    const char *val =
+        "\x61\x61\x61\x61\x62\x61\x61\x61\x63\x61\x61\x61\x64\x61"
+        "\x61\x61\x65\x61\x61\x61\xef\xbe\xad\xde\xbe\xba\xfe\xca";
     x.shrink_to_fit();
     ASSERT_EQ(y, val);
 

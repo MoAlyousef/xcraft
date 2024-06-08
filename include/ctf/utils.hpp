@@ -32,8 +32,6 @@ template <class T, Endian E = Endian::Little>
     requires(std::is_integral_v<T>)
 T up(std::string_view a);
 
-std::string str(std::string_view b);
-
 std::string cyclic(size_t len);
 
 template <class T>

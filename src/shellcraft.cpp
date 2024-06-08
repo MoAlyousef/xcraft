@@ -99,7 +99,7 @@ std::string disassemble(
     std::string ret;
     count = cs_disasm(
         handle,
-        (const unsigned char *)code.data(),
+        reinterpret_cast<const unsigned char *>(code.data()),
         code.size(),
         address ? *address : 0,
         0,
@@ -146,7 +146,7 @@ std::string assemble(const char *code, Architecture arch) {
         ));
     } else {
         for (auto i = 0; i < size; i++) {
-            ret.push_back((unsigned char)encode[i]);
+            ret += (char)encode[i];
         }
     }
 

@@ -3,6 +3,7 @@
 #include <ctf/utils.hpp>
 #include <fmt/format.h>
 #include <numeric>
+#include <span>
 #include <string_view>
 
 template <typename T, size_t N, size_t... Indices>

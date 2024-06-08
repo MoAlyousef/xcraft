@@ -2,9 +2,7 @@
 
 #include <ctf/enums.hpp>
 #include <optional>
-#include <span>
 #include <string>
-#include <vector>
 
 namespace ctf {
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "enums.hpp"
-#include <bit>
 
 namespace ctf {
 struct Context {

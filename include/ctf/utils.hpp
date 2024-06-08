@@ -1,13 +1,9 @@
 #pragma once
 
-#include <array>
-#include <bit>
 #include <cstddef>
 #include <ctf/enums.hpp>
-#include <span>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 namespace ctf {
 
@@ -16,7 +12,7 @@ constexpr void append_ranges(
     std::string &v, const Container &first, const Containers &...rest
 ) {
     for (const auto &elem : first) {
-        v.push_back(elem);
+            v.push_back(elem);
     }
     if constexpr (sizeof...(rest) > 0) {
         append_ranges(v, rest...);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "enums.hpp"
-#include <bit>
 #include <filesystem>
 #include <initializer_list>
 #include <string_view>

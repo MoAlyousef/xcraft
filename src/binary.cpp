@@ -1,6 +1,5 @@
 #include "bin_utils.hpp"
 #include <LIEF/LIEF.hpp>
-#include <bit>
 #include <ctf/binary.hpp>
 #include <fmt/format.h>
 #include <optional>

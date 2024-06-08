@@ -1,9 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <span>
 #include <string_view>
-#include <vector>
 
 namespace ctf {
 

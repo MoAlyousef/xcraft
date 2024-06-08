@@ -11,9 +11,7 @@ template <typename T = char, typename Container, typename... Containers>
 constexpr void append_ranges(
     std::string &v, const Container &first, const Containers &...rest
 ) {
-    for (const auto &elem : first) {
-            v.push_back(elem);
-    }
+    v += first;
     if constexpr (sizeof...(rest) > 0) {
         append_ranges(v, rest...);
     }

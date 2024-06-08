@@ -5,6 +5,7 @@
 #include <numeric>
 #include <span>
 #include <string_view>
+#include <vector>
 
 template <typename T, size_t N, size_t... Indices>
 constexpr std::array<T, N>

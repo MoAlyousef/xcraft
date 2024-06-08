@@ -116,15 +116,12 @@ std::string Process::readall() {
 }
 
 void Process::write(std::string_view message) {
-    for (auto e : message)
-        (void)fputc((int)e, pimpl->subprocess.stdin_file);
+    fmt::print(pimpl->subprocess.stdin_file, "{}", message);
     (void)fflush(pimpl->subprocess.stdin_file);
 }
 
 void Process::writeln(std::string_view message) {
-    for (auto e : message)
-        (void)fputc((int)e, pimpl->subprocess.stdin_file);
-    (void)fputc('\n', pimpl->subprocess.stdin_file);
+    fmt::println(pimpl->subprocess.stdin_file, "{}", message);
     (void)fflush(pimpl->subprocess.stdin_file);
 }
 

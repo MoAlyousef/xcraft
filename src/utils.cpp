@@ -130,7 +130,7 @@ std::string cyclic(size_t len) {
 
 template <class T>
 ptrdiff_t cyclic_find(T seq) {
-    std::string_view s;
+    std::string s;
     if constexpr (std::is_integral_v<T>)
         s = p<T>(seq);
     else

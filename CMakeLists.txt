@@ -108,7 +108,6 @@ if (CTF_BUILD_SHARED)
 endif()
 
 # set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-# link_libraries("/usr/lib/gcc/x86_64-linux-gnu/11/libasan.a")
 
 set(CTF_HEADER_FILES 
   include/ctf/binary.hpp

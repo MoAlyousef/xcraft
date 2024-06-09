@@ -9,18 +9,20 @@ namespace ctf {
 
 template <typename T = char, typename Container, typename... Containers>
 constexpr void append_ranges(
-    std::string &v, const Container &first, const Containers &...rest
+    std::string &v, Container &&first, Containers &&...rest
 ) {
-    v += first;
+    v += std::forward<Container>(first);
     if constexpr (sizeof...(rest) > 0) {
-        append_ranges(v, rest...);
+        append_ranges(v, std::forward<Containers>(rest)...);
     }
 }
 
 template <typename T = char, typename Container, typename... Containers>
-std::string from_ranges(const Container &first, const Containers &...rest) {
+std::string from_ranges(Container &&first, Containers &&...rest) {
     std::string v;
-    append_ranges(v, first, rest...);
+    append_ranges(
+        v, std::forward<Container>(first), std::forward<Containers>(rest)...
+    );
     return v;
 }
 

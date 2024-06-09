@@ -60,13 +60,13 @@ struct Gdb {
 
 template <class T, class... Args>
     requires(std::is_base_of_v<Tube, T>)
-std::unique_ptr<Tube> uniq_tube(Args... args) {
-    return std::unique_ptr<Tube>(new T(args...));
+std::unique_ptr<Tube> uniq_tube(Args &&...args) {
+    return std::unique_ptr<Tube>(new T(std::forward<Args>(args)...));
 }
 
 template <class T, class... Args>
     requires(std::is_base_of_v<Tube, T>)
-std::shared_ptr<Tube> shared_tube(Args... args) {
-    return std::shared_ptr<Tube>(new T(args...));
+std::shared_ptr<Tube> shared_tube(Args &&...args) {
+    return std::shared_ptr<Tube>(new T(std::forward<Args>(args)...));
 }
 } // namespace ctf

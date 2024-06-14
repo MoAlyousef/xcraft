@@ -1,4 +1,5 @@
 #include "bin_utils.hpp"
+#include <bit>
 #include <LIEF/LIEF.hpp>
 #include <ctf/binary.hpp>
 #include <fmt/format.h>
@@ -34,7 +35,7 @@ address_map extract_strings_from_section(
         } else {
             if (start != nullptr && (p - start) >= min_length) {
                 std::string str(
-                    reinterpret_cast<const char *>(start), p - start
+                    std::bit_cast<const char *>(start), p - start
                 );
                 size_t address = virtual_address + (start - content.data());
                 strings[str]   = address;
@@ -45,7 +46,7 @@ address_map extract_strings_from_section(
     }
 
     if (start != nullptr && (p - start) >= min_length) {
-        std::string str(reinterpret_cast<const char *>(start), p - start);
+        std::string str(std::bit_cast<const char *>(start), p - start);
         size_t address = virtual_address + (start - content.data());
         strings[str]   = address;
     }

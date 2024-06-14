@@ -1,3 +1,4 @@
+#include <bit>
 #include "ctf/enums.hpp"
 #include <capstone/capstone.h>
 #include <cstring>
@@ -99,7 +100,7 @@ std::string disassemble(
     std::string ret;
     count = cs_disasm(
         handle,
-        reinterpret_cast<const unsigned char *>(code.data()),
+        std::bit_cast<const unsigned char *>(code.data()),
         code.size(),
         address ? *address : 0,
         0,

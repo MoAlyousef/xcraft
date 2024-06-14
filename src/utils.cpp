@@ -23,7 +23,7 @@ namespace ctf {
 template <class T, Endian E>
     requires(std::is_integral_v<T>)
 std::string p(T val) {
-    std::string ret(reinterpret_cast<const char *>(&val), sizeof(T));
+    std::string ret(std::bit_cast<const char *>(&val), sizeof(T));
     if (E == Endian::Big)
         std::reverse(ret.begin(), ret.end());
     return ret;
@@ -38,7 +38,7 @@ T up(std::string_view a) {
     if (E == Endian::Big) {
         std::reverse(v.begin(), v.end());
     }
-    return *reinterpret_cast<T *>(v.data());
+    return *std::bit_cast<T *>(v.data());
 }
 
 template std::string p<uint32_t, Endian::Little>(const uint32_t);

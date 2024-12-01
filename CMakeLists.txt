@@ -33,7 +33,7 @@ project(ctf
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
-  GIT_TAG        10.2.1
+  GIT_TAG        11.0.2
   GIT_SHALLOW    True
 )
 
@@ -71,10 +71,11 @@ FetchContent_Declare(
 set(CAPSTONE_X86_ATT_DISABLE ON)
 set(CAPSTONE_BUILD_TESTS OFF)
 set(CAPSTONE_BUILD_CSTOOL OFF)
+set(CAPSTONE_BUILD_STATIC_LIBS ON)
 FetchContent_Declare(
   capstone
   GIT_REPOSITORY https://github.com/capstone-engine/capstone
-  GIT_TAG        5.0.1
+  GIT_TAG        6.0.0-Alpha2
   GIT_SHALLOW    True
 )
 
@@ -149,7 +150,7 @@ target_include_directories(ctf PRIVATE
 target_link_libraries(ctf PRIVATE 
   fmt::fmt 
   LIEF::LIEF 
-  capstone::capstone 
+  capstone_static
   keystone
 )
 if(MINGW)

@@ -11,7 +11,7 @@ std::pair<cs_arch, cs_mode> get_capstone_arch(
         arch = CS_ARCH_ARM;
         break;
     case LIEF::ARCHITECTURES::ARCH_ARM64:
-        arch = CS_ARCH_ARM64;
+        arch = CS_ARCH_AARCH64;
         break;
     case LIEF::ARCHITECTURES::ARCH_X86:
         arch = CS_ARCH_X86;

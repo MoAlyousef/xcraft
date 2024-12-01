@@ -150,7 +150,7 @@ target_include_directories(ctf PRIVATE
 target_link_libraries(ctf PRIVATE 
   fmt::fmt 
   LIEF::LIEF 
-  capstone_static
+  capstone
   keystone
 )
 if(MINGW)

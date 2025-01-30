@@ -8,11 +8,13 @@ namespace ctf {
 
 using opt_map = std::optional<address_map>;
 
-static opt_map IAT = std::nullopt;
+namespace {
 
-static opt_map ILT = std::nullopt;
+opt_map IAT = std::nullopt;
 
-static address_map populate_iat(const LIEF::PE::Binary &binary) {
+opt_map ILT = std::nullopt;
+
+address_map populate_iat(const LIEF::PE::Binary &binary) {
     address_map iat;
 
     for (const auto &import : binary.imports()) {
@@ -27,7 +29,7 @@ static address_map populate_iat(const LIEF::PE::Binary &binary) {
     return iat;
 }
 
-static address_map populate_ilt(const LIEF::PE::Binary &binary) {
+address_map populate_ilt(const LIEF::PE::Binary &binary) {
     address_map ilt;
 
     for (const auto &import : binary.imports()) {
@@ -40,7 +42,7 @@ static address_map populate_ilt(const LIEF::PE::Binary &binary) {
     }
     return ilt;
 }
-
+}
 struct PE::Impl {
     LIEF::PE::Binary *bin;
     bool dynamic = false;
@@ -48,8 +50,8 @@ struct PE::Impl {
     void init() { dynamic = bin->has_imports(); }
 };
 
-PE::PE(fs::path path)
-    : Binary(std::move(path)),
+PE::PE(const fs::path &path)
+    : Binary(path),
       pimpl(std::make_shared<PE::Impl>(dynamic_cast<LIEF::PE::Binary *>(
           static_cast<LIEF::Binary *>(Binary::bin())
       ))) {

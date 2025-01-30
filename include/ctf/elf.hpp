@@ -10,7 +10,7 @@ class ELF : public Binary {
     std::shared_ptr<Impl> pimpl;
 
   public:
-    explicit ELF(fs::path path);
+    explicit ELF(const fs::path &path);
     [[nodiscard]] RelroType relro() const;
     [[nodiscard]] bool statically_linked() const override;
     [[nodiscard]] address_map &got() const;

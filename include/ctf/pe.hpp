@@ -9,7 +9,8 @@ class PE : public Binary {
     std::shared_ptr<Impl> pimpl;
 
   public:
-    explicit PE(fs::path path);
+    explicit PE(const fs::path &path);
+    
     [[nodiscard]] bool statically_linked() const override;
     [[nodiscard]] address_map &iat() const;
     [[nodiscard]] address_map &ilt() const;

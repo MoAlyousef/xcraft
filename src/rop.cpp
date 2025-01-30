@@ -8,14 +8,15 @@
 
 namespace ctf {
 
-static bool is_gadget_end(const cs_insn &insn) {
+namespace {
+bool is_gadget_end(const cs_insn &insn) {
     return strcmp(insn.mnemonic, "ret") == 0 ||
            strcmp(insn.mnemonic, "call") == 0 ||
            strcmp(insn.mnemonic, "syscall") == 0 ||
            strcmp(insn.mnemonic, "int") == 0 || strcmp(insn.mnemonic, "j") == 0;
 }
 
-static std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
+std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     constexpr size_t depth               = 13;
     std::unique_ptr<LIEF::Binary> reader = LIEF::Parser::parse(path.string());
     auto header                          = reader->header();
@@ -90,7 +91,7 @@ static std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     return gadgets;
 }
 
-static std::vector<size_t> find_rop_gadget(
+std::vector<size_t> find_rop_gadget(
     std::span<ctf::Gadget> gadgets, std::initializer_list<std::string_view> seq
 ) {
     std::vector<size_t> addresses;
@@ -106,11 +107,12 @@ static std::vector<size_t> find_rop_gadget(
         auto res = std::search(
             insn_asm.begin(), insn_asm.end(), split.begin(), split.end()
         );
-        auto d = std::distance(insn_asm.begin(), res);
+        size_t d = std::distance(insn_asm.begin(), res);
         if (d < insn.size())
             addresses.push_back(insn[d].address);
     }
     return addresses;
+}
 }
 
 ROP::ROP(fs::path p) : path_(std::move(p)) {

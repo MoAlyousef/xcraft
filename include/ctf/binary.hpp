@@ -19,7 +19,13 @@ class Binary {
     void *bin();
 
   public:
-    Binary(fs::path);
+    explicit Binary(const fs::path &);
+    virtual ~Binary() = default;
+
+    Binary(const Binary &)                = default;
+    Binary &operator=(const Binary &)     = default;
+    Binary(Binary &&) noexcept            = default;
+    Binary &operator=(Binary &&) noexcept = default;
     [[nodiscard]] fs::path path() const;
     [[nodiscard]] Bits bits() const;
     [[nodiscard]] address_map &symbols() const;
@@ -33,6 +39,5 @@ class Binary {
     [[nodiscard]] size_t address() const;
     virtual size_t set_address(size_t addr);
     [[nodiscard]] virtual bool statically_linked() const = 0;
-    virtual ~Binary();
 };
 } // namespace ctf

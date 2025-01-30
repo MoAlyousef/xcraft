@@ -4,6 +4,7 @@ clang-analyzer-*,
 cppcoreguidelines-*,
 modernize-*,
 cert-*,
+bugrpone*,
 -modernize-use-trailing-return-type,
 -cppcoreguidelines-pro-bounds-*,
 -cppcoreguidelines-avoid-non-const-global-variables'

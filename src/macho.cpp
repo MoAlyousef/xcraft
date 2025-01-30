@@ -7,16 +7,18 @@
 namespace ctf {
 using opt_map = std::optional<address_map>;
 
-static opt_map STUBS = std::nullopt;
+namespace {
 
-static opt_map IAT = std::nullopt;
+opt_map STUBS = std::nullopt;
 
-static address_map populate_symbol_stubs(const LIEF::MachO::Binary &binary) {
+opt_map IAT = std::nullopt;
+
+address_map populate_symbol_stubs(const LIEF::MachO::Binary &binary) {
     address_map stubs;
 
     for (const auto &symbol : binary.symbols()) {
         if (symbol.is_external()) {
-            std::string name = symbol.name();
+            const std::string &name = symbol.name();
             if (!name.empty()) {
                 stubs[name] = symbol.value();
             }
@@ -26,7 +28,7 @@ static address_map populate_symbol_stubs(const LIEF::MachO::Binary &binary) {
     return stubs;
 }
 
-static address_map populate_iat(const LIEF::MachO::Binary &binary) {
+address_map populate_iat(const LIEF::MachO::Binary &binary) {
     address_map iat;
 
     for (const auto &relocation : binary.relocations()) {
@@ -41,6 +43,8 @@ static address_map populate_iat(const LIEF::MachO::Binary &binary) {
 
     return iat;
 }
+}
+
 
 struct MachO::Impl {
     LIEF::MachO::Binary *bin;
@@ -56,8 +60,8 @@ struct MachO::Impl {
     }
 };
 
-MachO::MachO(fs::path path)
-    : Binary(std::move(path)),
+MachO::MachO(const fs::path &path)
+    : Binary(path),
       pimpl(std::make_shared<MachO::Impl>(dynamic_cast<LIEF::MachO::Binary *>(
           static_cast<LIEF::Binary *>(Binary::bin())
       ))) {

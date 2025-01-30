@@ -8,7 +8,9 @@
 #include <keystone/keystone.h>
 #include <stdexcept>
 
-static const char *LINUX_X64_SH = R"lit(push 0x68
+namespace {
+
+const char *LINUX_X64_SH = R"lit(push 0x68
     mov rax, 0x732f2f2f6e69622f
     push rax
     mov rdi, rsp
@@ -29,7 +31,7 @@ static const char *LINUX_X64_SH = R"lit(push 0x68
     pop rax
     syscall)lit";
 
-static const char *LINUX_X86_SH = R"lit(push 0x68
+const char *LINUX_X86_SH = R"lit(push 0x68
     push 0x732f2f2f
     push 0x6e69622f
     mov ebx, esp
@@ -50,7 +52,7 @@ static const char *LINUX_X86_SH = R"lit(push 0x68
     pop eax
     int 0x80)lit";
 
-static std::pair<cs_arch, cs_mode> convert_arch_to_cs(ctf::Architecture arch) {
+std::pair<cs_arch, cs_mode> convert_arch_to_cs(ctf::Architecture arch) {
     using ctf::Architecture;
     switch (arch) {
     case Architecture::X86_64:
@@ -67,7 +69,7 @@ static std::pair<cs_arch, cs_mode> convert_arch_to_cs(ctf::Architecture arch) {
     }
 }
 
-static std::pair<ks_arch, ks_mode> convert_arch_to_ks(ctf::Architecture arch) {
+std::pair<ks_arch, ks_mode> convert_arch_to_ks(ctf::Architecture arch) {
     using ctf::Architecture;
     switch (arch) {
     case Architecture::X86_64:
@@ -82,6 +84,7 @@ static std::pair<ks_arch, ks_mode> convert_arch_to_ks(ctf::Architecture arch) {
     default:
         throw std::runtime_error("Architecture not implemented!");
     }
+}
 }
 
 namespace ctf {
@@ -107,7 +110,7 @@ std::string disassemble(
         &insn
     );
     if (count > 0) {
-        for (auto j = 0; j < count; j++) {
+        for (size_t j = 0; j < count; j++) {
             auto i = insn[j];
             if (address)
                 ret += fmt::format(
@@ -146,7 +149,7 @@ std::string assemble(const char *code, Architecture arch) {
             "Couldn't assemble entry: {}", ks_strerror(ks_errno(ks))
         ));
     } else {
-        for (auto i = 0; i < size; i++) {
+        for (size_t i = 0; i < size; i++) {
             ret += (char)encode[i];
         }
     }

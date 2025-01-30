@@ -125,7 +125,7 @@ std::string cyclic_alphabet_impl() noexcept {
 const std::string CYCLIC = cyclic_alphabet_impl();
 
 std::string cyclic(size_t len) {
-    return {CYCLIC.begin(), CYCLIC.begin() + (long)len};
+    return {CYCLIC.begin(), CYCLIC.begin() + (int64_t)len};
 }
 
 template <class T>

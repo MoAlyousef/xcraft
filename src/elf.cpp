@@ -9,11 +9,12 @@
 
 using opt_map = std::optional<address_map>;
 
-static opt_map PLT = std::nullopt;
+namespace {
+opt_map PLT = std::nullopt;
 
-static opt_map GOT = std::nullopt;
+opt_map GOT = std::nullopt;
 
-static address_map populate_plt(const LIEF::ELF::Binary &binary) {
+address_map populate_plt(const LIEF::ELF::Binary &binary) {
     address_map plt;
 
     const auto *plt_section = binary.get_section(".plt");
@@ -40,7 +41,7 @@ static address_map populate_plt(const LIEF::ELF::Binary &binary) {
     return plt;
 }
 
-static address_map populate_got(const LIEF::ELF::Binary &binary) {
+address_map populate_got(const LIEF::ELF::Binary &binary) {
     address_map got;
     for (const auto &r : binary.pltgot_relocations()) {
         auto s         = r.symbol();
@@ -48,6 +49,7 @@ static address_map populate_got(const LIEF::ELF::Binary &binary) {
     }
 
     return got;
+}
 }
 
 namespace ctf {
@@ -99,8 +101,8 @@ struct ELF::Impl {
     }
 };
 
-ELF::ELF(fs::path path)
-    : Binary(std::move(path)),
+ELF::ELF(const fs::path &path)
+    : Binary(path),
       pimpl(std::make_shared<ELF::Impl>(dynamic_cast<LIEF::ELF::Binary *>(
           static_cast<LIEF::Binary *>(Binary::bin())
       ))) {

@@ -9,7 +9,7 @@ class MachO : public Binary {
     std::shared_ptr<Impl> pimpl;
 
   public:
-    explicit MachO(fs::path path);
+    explicit MachO(const fs::path &path);
     [[nodiscard]] bool statically_linked() const override;
     [[nodiscard]] address_map &stubs() const;
     [[nodiscard]] address_map &iat() const;

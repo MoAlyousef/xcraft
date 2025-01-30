@@ -33,7 +33,7 @@ address_map extract_strings_from_section(
                 start = p;
             }
         } else {
-            if (start != nullptr && (p - start) >= min_length) {
+            if (start != nullptr && static_cast<size_t>(p - start) >= min_length) {
                 std::string str(
                     std::bit_cast<const char *>(start), p - start
                 );
@@ -45,7 +45,7 @@ address_map extract_strings_from_section(
         ++p;
     }
 
-    if (start != nullptr && (p - start) >= min_length) {
+    if (start != nullptr && static_cast<size_t>(p - start) >= min_length) {
         std::string str(std::bit_cast<const char *>(start), p - start);
         size_t address = virtual_address + (start - content.data());
         strings[str]   = address;
@@ -61,7 +61,7 @@ address_map extract_strings(const LIEF::Binary &binary, size_t min_length = 4) {
         auto section_strings = extract_strings_from_section(
             section.content(), section.virtual_address(), min_length
         );
-        all_strings.insert(section_strings.begin(), section_strings.end());
+        all_strings.merge(section_strings);
     }
 
     return all_strings;
@@ -75,7 +75,7 @@ struct Binary::Impl {
     bool has_stack_canaries = false;
     size_t address_         = 0;
     address_map symbols;
-    Impl(fs::path path)
+    explicit Impl(const fs::path &path)
         : path_(path), bin(LIEF::Parser::parse(path.string())), symbols{} {
         if (!fs::exists(path_))
             throw std::runtime_error(
@@ -96,9 +96,7 @@ struct Binary::Impl {
     }
 };
 
-Binary::~Binary() = default;
-
-Binary::Binary(fs::path path) : pimpl(std::make_shared<Binary::Impl>(path)) {}
+Binary::Binary(const fs::path &path) : pimpl(std::make_shared<Binary::Impl>(path)) {}
 
 Bits Binary::bits() const { return pimpl->bits; }
 

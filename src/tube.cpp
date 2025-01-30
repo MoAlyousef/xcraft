@@ -15,9 +15,8 @@
 #include <subprocess.h>
 #include <thread>
 
-static std::vector<const char *> split_strings(
-    char *str, const char *delimiter
-) {
+namespace {
+std::vector<const char *> split_strings(char *str, const char *delimiter) {
     std::vector<const char *> v;
     const char *token = strtok(str, delimiter);
     while (token != nullptr) {
@@ -28,10 +27,8 @@ static std::vector<const char *> split_strings(
     return v;
 }
 
-static void write_gdb_script(
-    const char *script_path,
-    unsigned short port,
-    std::string_view gdb_server_args
+void write_gdb_script(
+    const char *script_path, uint16_t port, std::string_view gdb_server_args
 ) {
     std::ofstream script;
     script.open(script_path);
@@ -43,14 +40,17 @@ static void write_gdb_script(
         throw std::runtime_error("Failed to write GDB script");
     }
 }
+} // namespace
 
 namespace ctf {
 
-Tube::~Tube() = default;
-
 struct Process::Impl {
-    struct subprocess_s subprocess {};
-    Impl(std::string_view args, std::string_view env) {
+    std::unique_ptr<subprocess_s, void (*)(subprocess_s *)> subprocess;
+    Impl(std::string_view args, std::string_view env)
+        : subprocess(new subprocess_s{}, [](subprocess_s *ptr) {
+              subprocess_destroy(ptr);
+              delete ptr;
+          }) {
         bool env_empty = env.size() == 0;
         auto args0     = std::string(args);
         auto args1     = split_strings(args0.data(), " ");
@@ -67,7 +67,10 @@ struct Process::Impl {
         if (env_empty)
             flags |= subprocess_option_inherit_environment;
         int result = subprocess_create_ex(
-            args1.data(), flags, env_empty ? nullptr : env1.data(), &subprocess
+            args1.data(),
+            flags,
+            env_empty ? nullptr : env1.data(),
+            subprocess.get()
         );
         if (0 != result) {
             throw std::runtime_error(
@@ -76,7 +79,6 @@ struct Process::Impl {
         }
         (void)fflush(nullptr);
     }
-    ~Impl() { subprocess_destroy(&subprocess); }
 };
 
 Process::Process(std::string_view args, std::string_view env)
@@ -86,7 +88,7 @@ std::string Process::readn(int n) {
     std::string ret(n, 0);
     int i  = 0;
     int ch = 0;
-    while (EOF != (ch = fgetc(pimpl->subprocess.stdout_file)) && i < n) {
+    while (EOF != (ch = fgetc(pimpl->subprocess->stdout_file)) && i < n) {
         ret[i] = (char)ch;
         i++;
     }
@@ -97,7 +99,7 @@ std::string Process::readln() {
     std::string ret;
     int ch = 0;
     do {
-        ch = fgetc(pimpl->subprocess.stdout_file);
+        ch = fgetc(pimpl->subprocess->stdout_file);
         if (ch == '\n')
             break;
         ret.push_back((char)ch);
@@ -109,31 +111,31 @@ std::string Process::readall() {
     std::string ret;
     int ch = 0;
     do {
-        ch = fgetc(pimpl->subprocess.stdout_file);
+        ch = fgetc(pimpl->subprocess->stdout_file);
         ret.push_back((char)ch);
     } while (EOF != ch);
     return ret;
 }
 
 void Process::write(std::string_view message) {
-    fmt::print(pimpl->subprocess.stdin_file, "{}", message);
-    (void)fflush(pimpl->subprocess.stdin_file);
+    fmt::print(pimpl->subprocess->stdin_file, "{}", message);
+    (void)fflush(pimpl->subprocess->stdin_file);
 }
 
 void Process::writeln(std::string_view message) {
-    fmt::println(pimpl->subprocess.stdin_file, "{}", message);
-    (void)fflush(pimpl->subprocess.stdin_file);
+    fmt::println(pimpl->subprocess->stdin_file, "{}", message);
+    (void)fflush(pimpl->subprocess->stdin_file);
 }
 
 void Process::write(char message) {
-    (void)fputc((int)message, pimpl->subprocess.stdin_file);
-    (void)fflush(pimpl->subprocess.stdin_file);
+    (void)fputc((int)message, pimpl->subprocess->stdin_file);
+    (void)fflush(pimpl->subprocess->stdin_file);
 }
 
 void Process::interactive() {
     auto impl = pimpl;
-    auto in   = impl->subprocess.stdin_file;
-    auto out  = impl->subprocess.stdout_file;
+    auto in   = impl->subprocess->stdin_file;
+    auto out  = impl->subprocess->stdout_file;
     std::thread t([=] {
         int ch = 0;
         while (EOF != (ch = fgetc(out))) {
@@ -153,13 +155,13 @@ void Process::interactive() {
     }
     t.join();
     int ret_status = 0;
-    subprocess_join(&impl->subprocess, &ret_status);
+    subprocess_join(impl->subprocess.get(), &ret_status);
     fmt::println(stderr, "Pipe close with {}", ret_status);
 }
 
 int Process::exit_status() {
     int ret_status = 0;
-    subprocess_join(&pimpl->subprocess, &ret_status);
+    subprocess_join(pimpl->subprocess.get(), &ret_status);
     return ret_status;
 }
 
@@ -169,7 +171,7 @@ struct Remote::Impl {
     asio::io_context io_context_;
     tcp::socket socket_;
 
-    Impl(std::string_view url, unsigned short port)
+    Impl(std::string_view url, uint16_t port)
         : io_context_(), socket_(io_context_) {
         tcp::resolver resolver(io_context_);
         auto endpoints = resolver.resolve(url, std::to_string(port));
@@ -178,7 +180,7 @@ struct Remote::Impl {
     }
 };
 
-Remote::Remote(std::string_view url, unsigned short port)
+Remote::Remote(std::string_view url, uint16_t port)
     : pimpl(std::make_shared<Remote::Impl>(url, port)) {}
 
 std::string Remote::readn(int n) {
@@ -225,6 +227,7 @@ void Remote::interactive() {
     pimpl->socket_.async_read_some(
         asio::buffer(read_, buf_size),
         [&](auto ec, size_t transferred) {
+            (void)ec;
             fmt::print("{}", std::string_view(read_.data(), transferred));
         }
     );
@@ -242,32 +245,32 @@ void Remote::interactive() {
     fmt::println(stderr, "Remote closed");
 }
 
-constexpr unsigned short DEFAULT_GDB_SERVER_PORT = 1234;
-constexpr int DEFAULT_SLEEP_MILLIS               = 16;
+constexpr uint16_t DEFAULT_GDB_SERVER_PORT = 1234;
+constexpr int DEFAULT_SLEEP_MILLIS         = 16;
 
 #ifndef _WIN32
 int Gdb::attach(const Process &pp, std::string_view gdb_server_args) {
     const char *script_path = "/tmp/gdb_script.txt";
-    unsigned short port     = DEFAULT_GDB_SERVER_PORT;
+    uint16_t port           = DEFAULT_GDB_SERVER_PORT;
     write_gdb_script(script_path, port, gdb_server_args);
     std::string gdb_args =
         fmt::format("{} gdb -x {} -q", CONTEXT.terminal, script_path);
     std::string gdb_server_cmd = fmt::format(
-        "gdbserver localhost:{} --attach {}", port, pp.pimpl->subprocess.child
+        "gdbserver localhost:{} --attach {}", port, pp.pimpl->subprocess->child
     );
     auto p = Process(gdb_server_cmd.c_str());
     std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
     );
     auto proc     = Process{gdb_args.c_str()};
-    auto to_write = fmt::format("attach {}\n", pp.pimpl->subprocess.child);
+    auto to_write = fmt::format("attach {}\n", pp.pimpl->subprocess->child);
     proc.write(to_write);
-    return p.pimpl->subprocess.child;
+    return p.pimpl->subprocess->child;
 }
 #endif
 
 Process Gdb::debug(std::string_view pp, std::string_view gdb_server_args) {
     const char *script_path = "/tmp/gdb_script.txt";
-    unsigned short port     = DEFAULT_GDB_SERVER_PORT;
+    uint16_t port           = DEFAULT_GDB_SERVER_PORT;
     write_gdb_script(script_path, port, gdb_server_args);
     std::string gdb_args =
         fmt::format("{} gdb -x {} -q {}", CONTEXT.terminal, script_path, pp);

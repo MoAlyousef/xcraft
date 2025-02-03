@@ -30,7 +30,7 @@ std::vector<const char *> split_strings(char *str, const char *delimiter) {
 void write_gdb_script(
     const char *script_path, uint16_t port, std::string_view gdb_server_args
 ) {
-    std::ofstream script;
+    std::ofstream script = {};
     script.open(script_path);
     if (script.is_open()) {
         fmt::print(
@@ -44,13 +44,22 @@ void write_gdb_script(
 
 namespace ctf {
 
+struct SubprocessWrapper {
+    subprocess_s s{};
+    SubprocessWrapper()                                     = default;
+    ~SubprocessWrapper() { subprocess_destroy(&s); }
+    SubprocessWrapper(const SubprocessWrapper &)            = delete;
+    SubprocessWrapper(SubprocessWrapper &&)                 = default;
+    SubprocessWrapper &operator=(const SubprocessWrapper &) = delete;
+    SubprocessWrapper &operator=(SubprocessWrapper &&)      = default;
+    subprocess_s *operator*() { return &s; }
+    subprocess_s *operator->() { return &s; }
+    subprocess_s *get() { return &s; }
+};
+
 struct Process::Impl {
-    std::unique_ptr<subprocess_s, void (*)(subprocess_s *)> subprocess;
-    Impl(std::string_view args, std::string_view env)
-        : subprocess(new subprocess_s{}, [](subprocess_s *ptr) {
-              subprocess_destroy(ptr);
-              delete ptr;
-          }) {
+    SubprocessWrapper subprocess{};
+    Impl(std::string_view args, std::string_view env) {
         bool env_empty = env.size() == 0;
         auto args0     = std::string(args);
         auto args1     = split_strings(args0.data(), " ");
@@ -82,7 +91,7 @@ struct Process::Impl {
 };
 
 Process::Process(std::string_view args, std::string_view env)
-    : pimpl(new Process::Impl(args, env)) {}
+    : Tube(), pimpl(new Process::Impl(args, env)) {}
 
 std::string Process::readn(int n) {
     std::string ret(n, 0);
@@ -98,22 +107,22 @@ std::string Process::readn(int n) {
 std::string Process::readln() {
     std::string ret;
     int ch = 0;
-    do {
-        ch = fgetc(pimpl->subprocess->stdout_file);
+    while ((ch = fgetc(pimpl->subprocess->stdout_file)) != EOF) {
         if (ch == '\n')
             break;
-        ret.push_back((char)ch);
-    } while (EOF != ch);
+        ret.push_back(static_cast<char>(ch));
+    }
     return ret;
 }
 
 std::string Process::readall() {
     std::string ret;
-    int ch = 0;
-    do {
-        ch = fgetc(pimpl->subprocess->stdout_file);
-        ret.push_back((char)ch);
-    } while (EOF != ch);
+    for (int ch = fgetc(pimpl->subprocess->stdout_file);;
+         ch     = fgetc(pimpl->subprocess->stdout_file)) {
+        ret.push_back(static_cast<char>(ch));
+        if (ch == EOF)
+            break;
+    }
     return ret;
 }
 
@@ -181,7 +190,7 @@ struct Remote::Impl {
 };
 
 Remote::Remote(std::string_view url, uint16_t port)
-    : pimpl(std::make_shared<Remote::Impl>(url, port)) {}
+    : Tube(), pimpl(std::make_shared<Remote::Impl>(url, port)) {}
 
 std::string Remote::readn(int n) {
     std::string ret(n, 0);

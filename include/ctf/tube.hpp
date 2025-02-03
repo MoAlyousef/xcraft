@@ -6,14 +6,16 @@
 namespace ctf {
 
 class Tube {
-  public:
-    Tube() = default;
-    virtual ~Tube() = default;
-
+  protected:
     Tube(const Tube &)                         = default;
     Tube &operator=(const Tube &)              = default;
     Tube(Tube &&) noexcept                     = default;
     Tube &operator=(Tube &&) noexcept          = default;
+    
+  public:
+    Tube() = default;
+    virtual ~Tube() = default;
+
     virtual void writeln(std::string_view msg) = 0;
     virtual void write(std::string_view msg)   = 0;
     virtual void write(char msg)               = 0;

@@ -1,4 +1,6 @@
-![Image](https://github.com/user-attachments/assets/5f5d8e34-faf6-4783-b23a-136d1a768cd6)
+<p align="center">
+<img src="https://github.com/user-attachments/assets/5f5d8e34-faf6-4783-b23a-136d1a768cd6" alt="image" width="200"/>
+</p>
 
 # xcraft
 

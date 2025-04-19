@@ -78,7 +78,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(asio subprocess magic_enum capstone keystone lief fmt)
 
-if (CTF_BUILD_TESTS)
+if (XCFT_BUILD_TESTS)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip

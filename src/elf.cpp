@@ -1,12 +1,12 @@
 #include <LIEF/LIEF.hpp>
-#include <ctf/elf.hpp>
-#include <ctf/enums.hpp>
-#include <fmt/core.h>
 #include <fmt/color.h>
+#include <fmt/core.h>
 #include <magic_enum.hpp>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <xcraft/elf.hpp>
+#include <xcraft/enums.hpp>
 
 using opt_map = std::optional<address_map>;
 
@@ -51,9 +51,9 @@ address_map populate_got(const LIEF::ELF::Binary &binary) {
 
     return got;
 }
-}
+} // namespace
 
-namespace ctf {
+namespace xcft {
 
 struct ELF::Impl {
     LIEF::ELF::Binary *bin;
@@ -104,9 +104,11 @@ struct ELF::Impl {
 
 ELF::ELF(const fs::path &path)
     : Binary(path),
-      pimpl(std::make_shared<ELF::Impl>(dynamic_cast<LIEF::ELF::Binary *>(
-          static_cast<LIEF::Binary *>(Binary::bin())
-      ))) {
+      pimpl(
+          std::make_shared<ELF::Impl>(dynamic_cast<LIEF::ELF::Binary *>(
+              static_cast<LIEF::Binary *>(Binary::bin())
+          ))
+      ) {
     pimpl->init();
     fmt::println("Elf:             {}", fs::canonical(Binary::path()).string());
     fmt::println("Bits:            {}", static_cast<int>(bits()));
@@ -115,8 +117,13 @@ ELF::ELF(const fs::path &path)
     fmt::println("Static:          {}", pimpl->dynamic ? "No" : "Yes");
     fmt::println(
         "NX:              {}",
-        executable_stack() ? fmt::styled("NX unknown - GNU_STACK missing", fmt::fg(fmt::color::red))
-                           : fmt::styled("NX Enabled                    ", fmt::fg(fmt::color::green))
+        executable_stack()
+            ? fmt::styled(
+                  "NX unknown - GNU_STACK missing", fmt::fg(fmt::color::red)
+              )
+            : fmt::styled(
+                  "NX Enabled                    ", fmt::fg(fmt::color::green)
+              )
     );
     fmt::println(
         "Stack:           {}",
@@ -170,4 +177,4 @@ size_t ELF::set_address(size_t addr) {
     }
     return Binary::set_address(addr);
 }
-} // namespace ctf
+} // namespace xcft

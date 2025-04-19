@@ -5,7 +5,7 @@
 #include <set>
 #include <utility>
 
-namespace ctf {
+namespace xcft {
 std::pair<cs_arch, cs_mode> get_capstone_arch(
     LIEF::ARCHITECTURES larch, const std::set<LIEF::MODES> &lmodes
 );

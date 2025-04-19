@@ -1,12 +1,12 @@
 #include <bit>
-#include "ctf/enums.hpp"
 #include <capstone/capstone.h>
 #include <cstring>
-#include <ctf/context.hpp>
-#include <ctf/shellcraft.hpp>
 #include <fmt/format.h>
 #include <keystone/keystone.h>
 #include <stdexcept>
+#include <xcraft/context.hpp>
+#include <xcraft/enums.hpp>
+#include <xcraft/shellcraft.hpp>
 
 namespace {
 
@@ -52,8 +52,8 @@ const char *LINUX_X86_SH = R"lit(push 0x68
     pop eax
     int 0x80)lit";
 
-std::pair<cs_arch, cs_mode> convert_arch_to_cs(ctf::Architecture arch) {
-    using ctf::Architecture;
+std::pair<cs_arch, cs_mode> convert_arch_to_cs(xcft::Architecture arch) {
+    using xcft::Architecture;
     switch (arch) {
     case Architecture::X86_64:
         return std::make_pair(CS_ARCH_X86, CS_MODE_64);
@@ -69,8 +69,8 @@ std::pair<cs_arch, cs_mode> convert_arch_to_cs(ctf::Architecture arch) {
     }
 }
 
-std::pair<ks_arch, ks_mode> convert_arch_to_ks(ctf::Architecture arch) {
-    using ctf::Architecture;
+std::pair<ks_arch, ks_mode> convert_arch_to_ks(xcft::Architecture arch) {
+    using xcft::Architecture;
     switch (arch) {
     case Architecture::X86_64:
         return std::make_pair(KS_ARCH_X86, KS_MODE_64);
@@ -85,9 +85,9 @@ std::pair<ks_arch, ks_mode> convert_arch_to_ks(ctf::Architecture arch) {
         throw std::runtime_error("Architecture not implemented!");
     }
 }
-}
+} // namespace
 
-namespace ctf {
+namespace xcft {
 
 std::string disassemble(
     std::string_view code, Architecture arch, std::optional<size_t> address
@@ -145,9 +145,11 @@ std::string assemble(const char *code, Architecture arch) {
     }
 
     if (ks_asm(ks, code, 0, &encode, &size, &count) != KS_ERR_OK) {
-        throw std::runtime_error(fmt::format(
-            "Couldn't assemble entry: {}", ks_strerror(ks_errno(ks))
-        ));
+        throw std::runtime_error(
+            fmt::format(
+                "Couldn't assemble entry: {}", ks_strerror(ks_errno(ks))
+            )
+        );
     } else {
         for (size_t i = 0; i < size; i++) {
             ret += (char)encode[i];
@@ -166,4 +168,4 @@ std::string linux_sh_x64() {
 }
 
 std::string linux_sh_x86() { return assemble(LINUX_X86_SH, Architecture::X86); }
-} // namespace ctf
+} // namespace xcft

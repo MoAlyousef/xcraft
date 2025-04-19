@@ -1,8 +1,8 @@
 #include <cstdint>
-#include <ctf/ctf.hpp>
+#include <xcraft/xcraft.hpp>
 #include <iostream>
 
-using namespace ctf;
+using namespace xcft;
 
 // rip at 0x62616162
 constexpr uint32_t RIP = 0x62616162;

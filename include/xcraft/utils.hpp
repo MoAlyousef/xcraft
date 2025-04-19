@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cstddef>
-#include <ctf/enums.hpp>
 #include <string>
 #include <type_traits>
+#include <xcraft/enums.hpp>
 
-namespace ctf {
+namespace xcft {
 
 template <typename T = char, typename Container, typename... Containers>
 constexpr void append_ranges(
@@ -64,4 +64,4 @@ extern template ptrdiff_t cyclic_find<uint64_t>(uint64_t seq);
 extern template ptrdiff_t cyclic_find<int>(int seq);
 extern template ptrdiff_t cyclic_find<long>(long seq);
 extern template ptrdiff_t cyclic_find<const char *>(const char *seq);
-} // namespace ctf
+} // namespace xcft

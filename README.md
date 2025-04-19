@@ -1,19 +1,34 @@
-# ctf
+![Image](https://github.com/user-attachments/assets/5f5d8e34-faf6-4783-b23a-136d1a768cd6)
 
-A C++ pwnlib-like library for binary exploitation.
+# xcraft
 
-It's not as developed as pwnlib, but it's a start.
+> **Casting HeXes - Crafting Exploits - Conjuring shells**  
+> A C++ “pwnlib‑style” grimoire for reverse‑engineering and exploit crafting.
+
+xcraft is your arcane toolkit for diving into ELF, PE and Mach‑O artifacts.  
+Think of it as pwnlib distilled through a cyber‑alchemist’s lens:
+
+- 🔍 **Binary Parsing**  
+  Seamless ELF/PE/Mach‑O introspection  
+- 🌀 **ROP & Gadget‑Summoning**  
+  Find, filter and chain gadgets in a single incantation  
+- ⚓ **Symbol, GOT & PLT Lookup**  
+  Resolve functions and pointers at will  
+- 🧮 **Bit‑Level Conjuring**  
+  Endian‑safe packing/unpacking, cyclic patterns, hex dumps  
+
+xcraft is still in its early chapters, but the forge is hot. Share your own spells (PRs and issue‑reports welcome!).
 
 ## Examples
 
 buffer overflow:
 ```cpp
-#include <ctf/ctf.hpp>
+#include <xcraft/xcraft.hpp>
 #include <exception>
 #include <iostream>
 #include <string_view>
 
-using namespace ctf;
+using namespace xcft;
 
 constexpr uint16_t PORT   = 9000;
 constexpr uint32_t OFFSET = 0x6161616e;
@@ -42,10 +57,10 @@ int main(int argc, char **argv) try {
 ret2libc:
 ```cpp
 #include <cstdint>
-#include <ctf/ctf.hpp>
+#include <xcraft/xcraft.hpp>
 #include <iostream>
 
-using namespace ctf;
+using namespace xcft;
 
 // rip at 0x62616162
 constexpr uint32_t RIP = 0x62616162;
@@ -98,12 +113,12 @@ int main() try {
 
 shellcode injection:
 ```cpp
-#include <ctf/ctf.hpp>
+#include <xcraft/xcraft.hpp>
 #include <exception>
 #include <iostream>
 #include <string_view>
 
-using namespace ctf;
+using namespace xcft;
 
 // rip clobber at 0x61676161
 constexpr uint32_t RIP = 0x62616162;
@@ -140,37 +155,37 @@ int main(int argc, char **argv) try {
 - googletest (for tests)
 
 The CMake script uses FetchContent to grab the dependencies and build them. I haven't had the chance to automate things via vcpkg or conan mainly due to missing dependencies there (LIEF and Keystone).
-The dependencies are private to ctf and their headers are not exposed to the developer.
+The dependencies are private to xcraft and their headers are not exposed to the developer.
 
 ## Requirements
 C++20 compiler. CMake > 3.18.
 
 ## Building
 ```bash
-git clone https://github.com/MoAlyousef/ctf
-cd ctf
+git clone https://github.com/MoAlyousef/xcraft
+cd xcraft
 # configure
 cmake -Bbin -GNinja
 # build
 cmake --build bin
 ```
 
-By default this builds a shared library libctf, this provides better link times.
-To disable this, use `-DCTF_BUILD_SHARED=OFF` in the configure step.
+By default this builds a shared library libxcraft, this provides better link times.
+To disable this, use `-DXCFT_BUILD_SHARED=OFF` in the configure step.
 
-The default configure step will not build the examples nor the tests. To build those, use `-DCTF_BUILD_EXAMPLES=ON` and `-DCTF_BUIILD_TESTS=ON`.
+The default configure step will not build the examples nor the tests. To build those, use `-DXCFT_BUILD_EXAMPLES=ON` and `-DXCFT_BUIILD_TESTS=ON`.
 
 A vulnerable source code in `examples/vuln.c` is used for the examples. Its not built by CMake. If you would like to build it you can use `gcc -o bin/vuln examples/vuln.c -zexecstack -fno-stack-protector -no-pie -D_FORTIFY_SOURCE=0`.
 
-You can use CMake's FetchContent to incorporate ctf into your project:
+You can use CMake's FetchContent to incorporate xcraft into your project:
 ```cmake
 include(FetchContent)
 FetchContent_Declare(
-  ctf
-  GIT_REPOSITORY https://github.com/MoAlyousef/ctf
+  xcraft
+  GIT_REPOSITORY https://github.com/MoAlyousef/xcraft
   GIT_SHALLOW    True
 )
-FetchContent_MakeAvailable(ctf)
+FetchContent_MakeAvailable(xcraft)
 ```
 
-Otherwise, you can build the project and use the generated ctf shared library and the public headers in `include/ctf`.
+Otherwise, you can build the project and use the generated xcraft shared library and the public headers in `include/xcraft`.

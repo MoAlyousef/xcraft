@@ -1,8 +1,8 @@
-#include <ctf/elf.hpp>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <xcraft/elf.hpp>
 
-using namespace ctf;
+using namespace xcft;
 
 TEST(ELFTest, Output) {
     ELF e("../bin/vuln");

@@ -1,8 +1,8 @@
-#include <ctf/tube.hpp>
-#include <ctf/utils.hpp>
 #include <gtest/gtest.h>
+#include <xcraft/tube.hpp>
+#include <xcraft/utils.hpp>
 
-using namespace ctf;
+using namespace xcft;
 
 TEST(ProcesTest, Output) {
     auto process = Process("bash");

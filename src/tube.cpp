@@ -1,8 +1,6 @@
 #include <asio.hpp>
 #include <cstdio>
 #include <cstring>
-#include <ctf/context.hpp>
-#include <ctf/tube.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -14,6 +12,8 @@
 #include <string>
 #include <subprocess.h>
 #include <thread>
+#include <xcraft/context.hpp>
+#include <xcraft/tube.hpp>
 
 namespace {
 std::vector<const char *> split_strings(char *str, const char *delimiter) {
@@ -42,11 +42,11 @@ void write_gdb_script(
 }
 } // namespace
 
-namespace ctf {
+namespace xcft {
 
 struct SubprocessWrapper {
     subprocess_s s{};
-    SubprocessWrapper()                                     = default;
+    SubprocessWrapper() = default;
     ~SubprocessWrapper() { subprocess_destroy(&s); }
     SubprocessWrapper(const SubprocessWrapper &)            = delete;
     SubprocessWrapper(SubprocessWrapper &&)                 = default;
@@ -268,7 +268,8 @@ int Gdb::attach(const Process &pp, std::string_view gdb_server_args) {
         "gdbserver localhost:{} --attach {}", port, pp.pimpl->subprocess->child
     );
     auto p = Process(gdb_server_cmd.c_str());
-    std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
     );
     auto proc     = Process{gdb_args.c_str()};
     auto to_write = fmt::format("attach {}\n", pp.pimpl->subprocess->child);
@@ -286,9 +287,10 @@ Process Gdb::debug(std::string_view pp, std::string_view gdb_server_args) {
     std::string gdb_server_cmd =
         fmt::format("gdbserver localhost:{} {}", port, pp);
     auto p = Process(gdb_server_cmd.c_str());
-    std::this_thread::sleep_for(std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
     );
     auto proc = Process{gdb_args.c_str()};
     return p;
 }
-} // namespace ctf
+} // namespace xcft

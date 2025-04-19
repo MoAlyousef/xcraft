@@ -1,12 +1,12 @@
 #include "bin_utils.hpp"
 #include <capstone/capstone.h>
-#include <ctf/rop.hpp>
 #include <fmt/format.h>
 #include <span>
 #include <stdexcept>
 #include <utility>
+#include <xcraft/rop.hpp>
 
-namespace ctf {
+namespace xcft {
 
 namespace {
 bool is_gadget_end(const cs_insn &insn) {
@@ -92,7 +92,7 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
 }
 
 std::vector<size_t> find_rop_gadget(
-    std::span<ctf::Gadget> gadgets, std::initializer_list<std::string_view> seq
+    std::span<xcft::Gadget> gadgets, std::initializer_list<std::string_view> seq
 ) {
     std::vector<size_t> addresses;
     std::vector<std::string_view> split(seq.begin(), seq.end());
@@ -113,7 +113,7 @@ std::vector<size_t> find_rop_gadget(
     }
     return addresses;
 }
-}
+} // namespace
 
 ROP::ROP(fs::path p) : path_(std::move(p)) {
     if (!fs::exists(path_))
@@ -125,8 +125,9 @@ ROP::ROP(fs::path p) : path_(std::move(p)) {
 
 const std::vector<Gadget> &ROP::gadgets() { return gadgets_; }
 
-std::vector<size_t> ROP::find_gadget(std::initializer_list<std::string_view> seq
+std::vector<size_t> ROP::find_gadget(
+    std::initializer_list<std::string_view> seq
 ) {
     return find_rop_gadget(gadgets_, seq);
 }
-} // namespace ctf
+} // namespace xcft

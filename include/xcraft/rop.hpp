@@ -8,7 +8,7 @@
 
 namespace fs = std::filesystem;
 
-namespace ctf {
+namespace xcft {
 
 struct Instruction {
     uint64_t address;
@@ -27,7 +27,8 @@ class ROP {
   public:
     explicit ROP(fs::path p);
     [[nodiscard]] const std::vector<Gadget> &gadgets();
-    std::vector<size_t> find_gadget(std::initializer_list<std::string_view> seq
+    std::vector<size_t> find_gadget(
+        std::initializer_list<std::string_view> seq
     );
 };
-} // namespace ctf
+} // namespace xcft

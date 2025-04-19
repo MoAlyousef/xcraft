@@ -1,8 +1,8 @@
-#include "ctf/enums.hpp"
 #include <bit>
-#include <ctf/context.hpp>
+#include <xcraft/context.hpp>
+#include <xcraft/enums.hpp>
 
-namespace ctf {
+namespace xcft {
 Context::Context() noexcept {
 // NOLINTBEGIN
 #ifdef _WIN32
@@ -35,4 +35,4 @@ Context::Context() noexcept {
 }
 
 Context CONTEXT;
-} // namespace ctf
+} // namespace xcft

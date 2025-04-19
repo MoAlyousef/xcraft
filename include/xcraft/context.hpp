@@ -2,7 +2,7 @@
 
 #include "enums.hpp"
 
-namespace ctf {
+namespace xcft {
 struct Context {
     Architecture arch    = Architecture::X86_64;
     Endian endian        = Endian::Little;
@@ -12,4 +12,4 @@ struct Context {
 };
 
 extern Context CONTEXT;
-} // namespace ctf
+} // namespace xcft

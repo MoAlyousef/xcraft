@@ -1,6 +1,6 @@
 #include "bin_utils.hpp"
 
-namespace ctf {
+namespace xcft {
 std::pair<cs_arch, cs_mode> get_capstone_arch(
     LIEF::ARCHITECTURES larch, const std::set<LIEF::MODES> &lmodes
 ) {
@@ -33,4 +33,4 @@ std::pair<cs_arch, cs_mode> get_capstone_arch(
     }
     return std::make_pair(arch, mode);
 }
-} // namespace ctf
+} // namespace xcft

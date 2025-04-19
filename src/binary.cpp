@@ -1,13 +1,13 @@
 #include "bin_utils.hpp"
-#include <bit>
 #include <LIEF/LIEF.hpp>
-#include <ctf/binary.hpp>
+#include <bit>
 #include <fmt/format.h>
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <xcraft/binary.hpp>
 
-namespace ctf {
+namespace xcft {
 using opt_map = std::optional<address_map>;
 
 static opt_map STRINGS = std::nullopt;
@@ -33,10 +33,9 @@ address_map extract_strings_from_section(
                 start = p;
             }
         } else {
-            if (start != nullptr && static_cast<size_t>(p - start) >= min_length) {
-                std::string str(
-                    std::bit_cast<const char *>(start), p - start
-                );
+            if (start != nullptr &&
+                static_cast<size_t>(p - start) >= min_length) {
+                std::string str(std::bit_cast<const char *>(start), p - start);
                 size_t address = virtual_address + (start - content.data());
                 strings[str]   = address;
             }
@@ -96,7 +95,8 @@ struct Binary::Impl {
     }
 };
 
-Binary::Binary(const fs::path &path) : pimpl(std::make_shared<Binary::Impl>(path)) {}
+Binary::Binary(const fs::path &path)
+    : pimpl(std::make_shared<Binary::Impl>(path)) {}
 
 Bits Binary::bits() const { return pimpl->bits; }
 
@@ -106,7 +106,8 @@ void *Binary::bin() { return pimpl->bin.get(); }
 
 address_map &Binary::symbols() const { return pimpl->symbols; }
 
-std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
+std::vector<size_t> Binary::search(
+    std::initializer_list<std::string_view> seq
 ) {
     auto [arch, mode] = get_capstone_arch(
         pimpl->bin->header().architecture(), pimpl->bin->header().modes()
@@ -200,4 +201,4 @@ address_map &Binary::strings() const {
     }
     return *STRINGS;
 }
-} // namespace ctf
+} // namespace xcft

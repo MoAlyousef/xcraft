@@ -3,7 +3,7 @@
 #include "binary.hpp"
 #include "enums.hpp"
 
-namespace ctf {
+namespace xcft {
 
 class ELF : public Binary {
     struct Impl;
@@ -17,4 +17,4 @@ class ELF : public Binary {
     [[nodiscard]] address_map &plt() const;
     size_t set_address(size_t addr) override;
 };
-} // namespace ctf
+} // namespace xcft

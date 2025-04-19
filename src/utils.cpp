@@ -1,15 +1,16 @@
 #include <algorithm>
 #include <cstdio>
-#include <ctf/utils.hpp>
 #include <fmt/format.h>
 #include <numeric>
 #include <span>
 #include <string_view>
 #include <vector>
+#include <xcraft/utils.hpp>
 
 template <typename T, size_t N, size_t... Indices>
-constexpr std::array<T, N>
-span_to_array_helper(std::span<T, N> span, std::index_sequence<Indices...>) {
+constexpr std::array<T, N> span_to_array_helper(
+    std::span<T, N> span, std::index_sequence<Indices...>
+) {
     return {span[Indices]...};
 }
 
@@ -18,7 +19,7 @@ constexpr std::array<T, N> span_to_array(std::span<T, N> span) {
     return span_to_array_helper(span, std::make_index_sequence<N>());
 }
 
-namespace ctf {
+namespace xcft {
 
 template <class T, Endian E>
     requires(std::is_integral_v<T>)
@@ -159,4 +160,4 @@ void hex_println(std::string_view a) {
     hex_print(a);
     fmt::println("");
 }
-} // namespace ctf
+} // namespace xcft

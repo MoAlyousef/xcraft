@@ -10,7 +10,7 @@
 namespace fs      = std::filesystem;
 using address_map = std::unordered_map<std::string, uint64_t>;
 
-namespace ctf {
+namespace xcft {
 class Binary {
     struct Impl;
     std::shared_ptr<Impl> pimpl;
@@ -40,4 +40,4 @@ class Binary {
     virtual size_t set_address(size_t addr);
     [[nodiscard]] virtual bool statically_linked() const = 0;
 };
-} // namespace ctf
+} // namespace xcft

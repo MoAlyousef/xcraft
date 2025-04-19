@@ -1,7 +1,7 @@
-#include <ctf/utils.hpp>
 #include <gtest/gtest.h>
+#include <xcraft/utils.hpp>
 
-using namespace ctf;
+using namespace xcft;
 using namespace std::literals;
 
 TEST(UtilsTest, BasicAssertions) {

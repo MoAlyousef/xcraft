@@ -18,5 +18,5 @@ jobs:
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: Build
       shell: bash
-      run: cmake -Bbin -GNinja -DCTF_BUILD_SHARED=OFF && cmake --build bin 
+      run: cmake -Bbin -GNinja -DXCFT_BUILD_SHARED=OFF && cmake --build bin 
       

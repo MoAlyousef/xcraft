@@ -3,17 +3,17 @@
 #include <memory>
 #include <string_view>
 
-namespace ctf {
+namespace xcft {
 
 class Tube {
   protected:
-    Tube(const Tube &)                         = default;
-    Tube &operator=(const Tube &)              = default;
-    Tube(Tube &&) noexcept                     = default;
-    Tube &operator=(Tube &&) noexcept          = default;
-    
+    Tube(const Tube &)                = default;
+    Tube &operator=(const Tube &)     = default;
+    Tube(Tube &&) noexcept            = default;
+    Tube &operator=(Tube &&) noexcept = default;
+
   public:
-    Tube() = default;
+    Tube()          = default;
     virtual ~Tube() = default;
 
     virtual void writeln(std::string_view msg) = 0;
@@ -77,4 +77,4 @@ template <class T, class... Args>
 std::shared_ptr<Tube> shared_tube(Args &&...args) {
     return std::shared_ptr<Tube>(new T(std::forward<Args>(args)...));
 }
-} // namespace ctf
+} // namespace xcft

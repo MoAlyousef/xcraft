@@ -1,9 +1,9 @@
-#include <ctf/ctf.hpp>
+#include <xcraft/xcraft.hpp>
 #include <exception>
 #include <iostream>
 #include <string_view>
 
-using namespace ctf;
+using namespace xcft;
 
 // rip clobber at 0x61676161
 constexpr uint32_t RIP = 0x62616162;

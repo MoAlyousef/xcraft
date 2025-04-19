@@ -1,10 +1,10 @@
 #pragma once
 
-#include <ctf/enums.hpp>
 #include <optional>
 #include <string>
+#include <xcraft/enums.hpp>
 
-namespace ctf {
+namespace xcft {
 
 std::string disassemble(
     std::string_view code,
@@ -24,4 +24,4 @@ std::string linux_sh_x64();
 
 std::string linux_sh_x86();
 
-} // namespace ctf
+} // namespace xcft

@@ -2,6 +2,7 @@
 #include <ctf/elf.hpp>
 #include <ctf/enums.hpp>
 #include <fmt/core.h>
+#include <fmt/color.h>
 #include <magic_enum.hpp>
 #include <optional>
 #include <stdexcept>
@@ -107,17 +108,38 @@ ELF::ELF(const fs::path &path)
           static_cast<LIEF::Binary *>(Binary::bin())
       ))) {
     pimpl->init();
-    fmt::println("Elf:     {}", fs::canonical(Binary::path()).string());
-    fmt::println("Bits:    {}", static_cast<int>(bits()));
-    fmt::println("Arch:    {}", magic_enum::enum_name(arch()));
-    fmt::println("Endian:  {}", magic_enum::enum_name(endianness()));
-    fmt::println("Static:  {}", pimpl->dynamic);
-    fmt::println("NX:      {}", executable_stack());
+    fmt::println("Elf:             {}", fs::canonical(Binary::path()).string());
+    fmt::println("Bits:            {}", static_cast<int>(bits()));
+    fmt::println("Arch:            {}", magic_enum::enum_name(arch()));
+    fmt::println("Endian:          {}", magic_enum::enum_name(endianness()));
+    fmt::println("Static:          {}", pimpl->dynamic ? "No" : "Yes");
     fmt::println(
-        "Stack:   {}", stack_canaries() ? "canary found" : "No canary found"
+        "NX:              {}",
+        executable_stack() ? fmt::styled("NX unknown - GNU_STACK missing", fmt::fg(fmt::color::red))
+                           : fmt::styled("NX Enabled                    ", fmt::fg(fmt::color::green))
     );
-    fmt::println("Pie:     {}", position_independent());
-    fmt::println("Relro:   {}", magic_enum::enum_name(relro()));
+    fmt::println(
+        "Stack:           {}",
+        stack_canaries()
+            ? fmt::styled("Canary found   ", fmt::fg(fmt::color::green))
+            : fmt::styled("No canary found", fmt::fg(fmt::color::red))
+    );
+    fmt::println(
+        "PIE:             {}",
+        position_independent()
+            ? fmt::styled("PIE Enabled      ", fmt::fg(fmt::color::green))
+            : fmt::styled("No PIE (0x400000)", fmt::fg(fmt::color::red))
+    );
+    fmt::println(
+        "Relro:           {}",
+        relro() == RelroType::FullRelro
+            ? fmt::styled("Full Relro   ", fmt::fg(fmt::color::green))
+            : (relro() == RelroType::PartialRelro
+                   ? fmt::styled("Partial Relro", fmt::fg(fmt::color::yellow))
+
+                   : fmt::styled("No Relro     ", fmt::fg(fmt::color::red)))
+    );
+    fmt::println("");
 }
 
 RelroType ELF::relro() const { return pimpl->relro; }

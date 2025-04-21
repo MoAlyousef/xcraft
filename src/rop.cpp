@@ -1,6 +1,7 @@
 #include "bin_utils.hpp"
 #include <capstone/capstone.h>
 #include <fmt/format.h>
+#include <set>
 #include <span>
 #include <stdexcept>
 #include <utility>
@@ -94,7 +95,7 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
 std::vector<size_t> find_rop_gadget(
     std::span<xcft::Gadget> gadgets, std::initializer_list<std::string_view> seq
 ) {
-    std::vector<size_t> addresses;
+    std::set<size_t> addresses;
     std::vector<std::string_view> split(seq.begin(), seq.end());
     for (auto const &gadget : gadgets) {
         auto insn = gadget.ins;
@@ -109,9 +110,9 @@ std::vector<size_t> find_rop_gadget(
         );
         size_t d = std::distance(insn_asm.begin(), res);
         if (d < insn.size())
-            addresses.push_back(insn[d].address);
+            addresses.insert(insn[d].address);
     }
-    return addresses;
+    return std::vector(addresses.begin(), addresses.end());
 }
 } // namespace
 

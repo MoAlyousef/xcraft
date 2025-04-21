@@ -1,296 +1,370 @@
-#include <asio.hpp>
+#include <array>
+#include <atomic>
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <fmt/core.h>
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-#include <fmt/ranges.h>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <subprocess.h>
+#include <system_error>
 #include <thread>
+#include <vector>
+
+#include <asio.hpp>
+#include <fmt/format.h>
+#include <subprocess.h>
+
 #include <xcraft/context.hpp>
 #include <xcraft/tube.hpp>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+using asio::ip::tcp;
+
 namespace {
-std::vector<const char *> split_strings(char *str, const char *delimiter) {
-    std::vector<const char *> v;
-    const char *token = strtok(str, delimiter);
-    while (token != nullptr) {
-        v.push_back(token);
-        token = strtok(nullptr, delimiter);
-    }
 
-    return v;
+static std::vector<std::string> split_string(std::string_view s, char delim) {
+    std::vector<std::string> out;
+    std::string current;
+    bool in_quote = false;
+
+    for (size_t i = 0; i < s.size(); ++i) {
+        char c = s[i];
+        if (c == '\\' && i + 1 < s.size()) {
+            current.push_back(s[++i]);
+        } else if (c == '"') {
+            in_quote = !in_quote;
+        } else if (c == delim && !in_quote) {
+            out.emplace_back(std::move(current));
+            current.clear();
+        } else {
+            current.push_back(c);
+        }
+    }
+    out.emplace_back(std::move(current));
+    return out;
 }
 
-void write_gdb_script(
-    const char *script_path, uint16_t port, std::string_view gdb_server_args
+struct TempFile {
+    std::filesystem::path path;
+
+    explicit TempFile(const std::string &suffix = ".tmp") {
+#ifdef _WIN32
+        char tmpPath[MAX_PATH];
+        if (::GetTempPathA(MAX_PATH, tmpPath) == 0)
+            throw std::runtime_error("GetTempPathA failed");
+        char tmpFile[MAX_PATH];
+        if (::GetTempFileNameA(tmpPath, "xcft", 0, tmpFile) == 0)
+            throw std::runtime_error("GetTempFileNameA failed");
+        path = std::string(tmpFile) + suffix;
+        std::error_code ec;
+        std::filesystem::rename(tmpFile, path, ec);
+        if (ec)
+            throw std::runtime_error(
+                "Failed to rename temp file: " + ec.message()
+            );
+#else
+        auto dir = std::filesystem::temp_directory_path();
+        std::string pattern =
+            (dir / std::filesystem::path("xcftXXXXXX" + suffix)).string();
+        std::vector<char> buf(pattern.begin(), pattern.end());
+        buf.push_back('\0');
+        int fd = ::mkstemp(buf.data());
+        if (fd == -1)
+            throw std::system_error(
+                errno, std::generic_category(), "mkstemp failed"
+            );
+        ::close(fd);
+        path = buf.data();
+#endif
+        std::ofstream ofs(path.string(), std::ios::app);
+        if (!ofs)
+            throw std::runtime_error(
+                "Failed to create TempFile: " + path.string()
+            );
+    }
+
+    ~TempFile() {
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+    }
+
+    operator std::string() const { return path.string(); }
+};
+
+static void write_gdb_script(
+    const std::filesystem::path &p, uint16_t port, std::string_view extra
 ) {
-    std::ofstream script = {};
-    script.open(script_path);
-    if (script.is_open()) {
-        fmt::print(
-            script, "target remote localhost:{}\n{}\n", port, gdb_server_args
-        );
-    } else {
+    std::ofstream fs(p);
+    if (!fs)
         throw std::runtime_error("Failed to write GDB script");
-    }
+    fs << fmt::format("target remote localhost:{}\n{}\n", port, extra);
 }
+
 } // namespace
 
 namespace xcft {
 
 struct SubprocessWrapper {
     subprocess_s s{};
-    SubprocessWrapper() = default;
     ~SubprocessWrapper() { subprocess_destroy(&s); }
-    SubprocessWrapper(const SubprocessWrapper &)            = delete;
-    SubprocessWrapper(SubprocessWrapper &&)                 = default;
-    SubprocessWrapper &operator=(const SubprocessWrapper &) = delete;
-    SubprocessWrapper &operator=(SubprocessWrapper &&)      = default;
-    subprocess_s *operator*() { return &s; }
-    subprocess_s *operator->() { return &s; }
     subprocess_s *get() { return &s; }
 };
 
 struct Process::Impl {
-    SubprocessWrapper subprocess{};
+    std::vector<std::string> argv_store;
+    std::vector<std::string> env_store;
+    std::vector<const char *> argv_c;
+    std::vector<const char *> envp_c;
+
+    SubprocessWrapper proc;
+
     Impl(std::string_view args, std::string_view env) {
-        bool env_empty = env.size() == 0;
-        auto args0     = std::string(args);
-        auto args1     = split_strings(args0.data(), " ");
-        args1.push_back(nullptr);
-        std::vector<const char *> env1;
-        if (!env_empty) {
-            auto env0 = std::string(env);
-            env1      = split_strings(env0.data(), ";");
-            env1.push_back(nullptr);
+        argv_store = split_string(args, ' ');
+        argv_c.reserve(argv_store.size() + 1);
+        for (auto &s : argv_store)
+            argv_c.push_back(s.c_str());
+        argv_c.push_back(nullptr);
+
+        if (!env.empty()) {
+            env_store = split_string(env, ';');
+            envp_c.reserve(env_store.size() + 1);
+            for (auto &e : env_store)
+                envp_c.push_back(e.c_str());
+            envp_c.push_back(nullptr);
         }
+
         int flags = subprocess_option_combined_stdout_stderr |
                     subprocess_option_no_window |
                     subprocess_option_search_user_path;
-        if (env_empty)
+
+        if (env.empty())
             flags |= subprocess_option_inherit_environment;
-        int result = subprocess_create_ex(
-            args1.data(),
+
+        int rc = subprocess_create_ex(
+            argv_c.data(),
             flags,
-            env_empty ? nullptr : env1.data(),
-            subprocess.get()
+            env.empty() ? nullptr : envp_c.data(),
+            proc.get()
         );
-        if (0 != result) {
+        if (rc != 0)
             throw std::runtime_error(
-                fmt::format("Failed to launch process {}", args1[0])
+                "Failed to launch process: " + argv_store.front()
             );
-        }
-        (void)fflush(nullptr);
     }
 };
 
 Process::Process(std::string_view args, std::string_view env)
-    : Tube(), pimpl(new Process::Impl(args, env)) {}
+    : Tube(), pimpl(std::make_unique<Impl>(args, env)) {}
+
+static std::string read_stream(FILE *f, std::function<bool(int)> pred) {
+    std::string out;
+    int ch;
+    while ((ch = fgetc(f)) != EOF) {
+        if (pred && pred(ch))
+            break;
+        out.push_back(static_cast<char>(ch));
+    }
+    return out;
+}
 
 std::string Process::readn(int n) {
-    std::string ret(n, 0);
-    int i  = 0;
-    int ch = 0;
-    while (EOF != (ch = fgetc(pimpl->subprocess->stdout_file)) && i < n) {
-        ret[i] = (char)ch;
-        i++;
+    std::string out;
+    out.reserve(n);
+    FILE *f = pimpl->proc.get()->stdout_file;
+    while (n-- > 0) {
+        int ch = fgetc(f);
+        if (ch == EOF)
+            break;
+        out.push_back(static_cast<char>(ch));
     }
-    return ret;
+    return out;
 }
 
 std::string Process::readln() {
-    std::string ret;
-    int ch = 0;
-    while ((ch = fgetc(pimpl->subprocess->stdout_file)) != EOF) {
-        if (ch == '\n')
-            break;
-        ret.push_back(static_cast<char>(ch));
-    }
-    return ret;
+    return read_stream(pimpl->proc.get()->stdout_file, [](int c) {
+        return c == '\n';
+    });
 }
 
 std::string Process::readall() {
-    std::string ret;
-    for (int ch = fgetc(pimpl->subprocess->stdout_file);;
-         ch     = fgetc(pimpl->subprocess->stdout_file)) {
-        ret.push_back(static_cast<char>(ch));
-        if (ch == EOF)
-            break;
-    }
-    return ret;
+    return read_stream(pimpl->proc.get()->stdout_file, nullptr);
 }
 
-void Process::write(std::string_view message) {
-    fmt::print(pimpl->subprocess->stdin_file, "{}", message);
-    (void)fflush(pimpl->subprocess->stdin_file);
+static void write_raw(FILE *f, std::string_view s) {
+    fwrite(s.data(), 1, s.size(), f);
+    fflush(f);
 }
-
-void Process::writeln(std::string_view message) {
-    fmt::println(pimpl->subprocess->stdin_file, "{}", message);
-    (void)fflush(pimpl->subprocess->stdin_file);
+void Process::write(std::string_view s) {
+    write_raw(pimpl->proc.get()->stdin_file, s);
 }
-
-void Process::write(char message) {
-    (void)fputc((int)message, pimpl->subprocess->stdin_file);
-    (void)fflush(pimpl->subprocess->stdin_file);
+void Process::writeln(std::string_view s) {
+    write_raw(pimpl->proc.get()->stdin_file, s),
+        write_raw(pimpl->proc.get()->stdin_file, "\n");
+}
+void Process::write(char c) {
+    fputc(c, pimpl->proc.get()->stdin_file);
+    fflush(pimpl->proc.get()->stdin_file);
 }
 
 void Process::interactive() {
-    auto impl = pimpl;
-    auto in   = impl->subprocess->stdin_file;
-    auto out  = impl->subprocess->stdout_file;
-    std::thread t([=] {
-        int ch = 0;
-        while (EOF != (ch = fgetc(out))) {
-            (void)fputc(ch, stdout);
-            (void)fflush(stdout);
+    auto *out = pimpl->proc.get()->stdout_file;
+    auto *in  = pimpl->proc.get()->stdin_file;
+
+    std::atomic<bool> stop{false};
+    std::thread t([&] {
+        while (!stop) {
+            int ch = fgetc(out);
+            if (ch == EOF)
+                break;
+            fputc(ch, stdout);
+            fflush(stdout);
         }
     });
+
     std::string line;
     while (std::getline(std::cin, line)) {
-        try {
-            line += '\n';
-            fmt::print(in, "{}", line);
-            (void)fflush(in);
-        } catch (...) {
+        if (line.empty())
             break;
-        }
+        writeln(line);
     }
+    stop = true;
     t.join();
-    int ret_status = 0;
-    subprocess_join(impl->subprocess.get(), &ret_status);
-    fmt::println(stderr, "Pipe close with {}", ret_status);
 }
 
 int Process::exit_status() {
-    int ret_status = 0;
-    subprocess_join(pimpl->subprocess.get(), &ret_status);
-    return ret_status;
+    int status = 0;
+    subprocess_join(pimpl->proc.get(), &status);
+    return status;
 }
 
-using asio::ip::tcp;
-
 struct Remote::Impl {
-    asio::io_context io_context_;
-    tcp::socket socket_;
-
-    Impl(std::string_view url, uint16_t port)
-        : io_context_(), socket_(io_context_) {
-        tcp::resolver resolver(io_context_);
-        auto endpoints = resolver.resolve(url, std::to_string(port));
-        asio::connect(socket_, endpoints);
-        (void)fflush(nullptr);
+    asio::io_context io;
+    tcp::socket sock;
+    Impl(std::string_view host, uint16_t port) : io(), sock(io) {
+        tcp::resolver res(io);
+        asio::connect(sock, res.resolve(host, std::to_string(port)));
+        sock.set_option(tcp::no_delay{true});
     }
 };
 
-Remote::Remote(std::string_view url, uint16_t port)
-    : Tube(), pimpl(std::make_shared<Remote::Impl>(url, port)) {}
+Remote::Remote(std::string_view host, uint16_t port)
+    : Tube(), pimpl(std::make_shared<Impl>(host, port)) {}
 
 std::string Remote::readn(int n) {
-    std::string ret(n, 0);
-    asio::error_code ec;
-    asio::read(
-        pimpl->socket_, asio::buffer(ret), asio::transfer_exactly(n), ec
-    );
-    return ret;
+    std::string out(n, '\0');
+    asio::read(pimpl->sock, asio::buffer(out), asio::transfer_exactly(n));
+    return out;
 }
-
 std::string Remote::readln() {
-    std::string ret;
-    asio::error_code ec;
-    asio::read_until(pimpl->socket_, asio::dynamic_buffer(ret), '\n', ec);
-    return ret;
+    std::string out;
+    asio::read_until(pimpl->sock, asio::dynamic_buffer(out), '\n');
+    return out;
 }
-
 std::string Remote::readall() {
-    std::string ret;
+    std::string out;
     asio::error_code ec;
-    asio::read(pimpl->socket_, asio::dynamic_buffer(ret), ec);
-    return ret;
+    asio::read(pimpl->sock, asio::dynamic_buffer(out), ec);
+    if (ec && ec != asio::error::eof)
+        throw std::system_error(ec);
+    return out;
 }
 
-void Remote::writeln(std::string_view message) {
-    asio::write(pimpl->socket_, asio::buffer(message));
-    std::array<char, 1> buf = {'\n'};
-    asio::write(pimpl->socket_, asio::buffer(buf));
+void Remote::write(std::string_view s) {
+    asio::write(pimpl->sock, asio::buffer(s));
 }
-
-void Remote::write(std::string_view message) {
-    asio::write(pimpl->socket_, asio::buffer(message));
+void Remote::writeln(std::string_view s) {
+    write(s);
+    write("\n");
 }
-
-void Remote::write(char message) {
-    std::array<char, 1> buf = {message};
-    asio::write(pimpl->socket_, asio::buffer(buf));
-}
+void Remote::write(char c) { asio::write(pimpl->sock, asio::buffer(&c, 1)); }
 
 void Remote::interactive() {
-    constexpr size_t buf_size = 1024;
-    std::array<char, buf_size> read_{};
-    pimpl->socket_.async_read_some(
-        asio::buffer(read_, buf_size),
-        [&](auto ec, size_t transferred) {
-            (void)ec;
-            fmt::print("{}", std::string_view(read_.data(), transferred));
-        }
-    );
-    std::thread t([this] { pimpl->io_context_.run(); });
+    std::array<char, 1024> buf;
+    std::atomic<bool> done{false};
+
+    std::function<void()> start_read;
+    start_read = [&] {
+        pimpl->sock.async_read_some(
+            asio::buffer(buf),
+            [&, this](asio::error_code ec, std::size_t n) {
+                if (!ec && n) {
+                    std::cout.write(buf.data(), n);
+                    std::cout.flush();
+                    start_read();
+                } else {
+                    done = true;
+                }
+            }
+        );
+    };
+    start_read();
+    std::thread io_thr([&] { pimpl->io.run(); });
+
     std::string line;
-    while (std::getline(std::cin, line)) {
-        try {
-            line += '\n';
-            asio::write(pimpl->socket_, asio::buffer(line));
-        } catch (...) {
-            break;
-        }
-    }
-    t.join();
-    fmt::println(stderr, "Remote closed");
+    while (!done && std::getline(std::cin, line))
+        writeln(line);
+
+    done = true;
+    pimpl->sock.close();
+    io_thr.join();
 }
 
-constexpr uint16_t DEFAULT_GDB_SERVER_PORT = 1234;
-constexpr int DEFAULT_SLEEP_MILLIS         = 16;
+constexpr uint16_t DEFAULT_GDB_PORT = 1234;
+constexpr auto DEFAULT_SLEEP        = std::chrono::milliseconds(16);
 
 #ifndef _WIN32
-int Gdb::attach(const Process &pp, std::string_view gdb_server_args) {
-    const char *script_path = "/tmp/gdb_script.txt";
-    uint16_t port           = DEFAULT_GDB_SERVER_PORT;
-    write_gdb_script(script_path, port, gdb_server_args);
-    std::string gdb_args =
-        fmt::format("{} gdb -x {} -q", CONTEXT.terminal, script_path);
-    std::string gdb_server_cmd = fmt::format(
-        "gdbserver localhost:{} --attach {}", port, pp.pimpl->subprocess->child
+int Gdb::attach(const Process &pp, std::string_view extra) {
+    TempFile script(".gdb");
+    write_gdb_script(script.path, DEFAULT_GDB_PORT, extra);
+
+    Process gs(
+        fmt::format(
+            "gdbserver localhost:{} --attach {}",
+            DEFAULT_GDB_PORT,
+            pp.pimpl->proc.get()->child
+        ),
+        ""
     );
-    auto p = Process(gdb_server_cmd.c_str());
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
+
+    std::this_thread::sleep_for(DEFAULT_SLEEP);
+
+    Process gdb(
+        fmt::format("{} gdb -x {} -q", CONTEXT.terminal, script.path.string()),
+        ""
     );
-    auto proc     = Process{gdb_args.c_str()};
-    auto to_write = fmt::format("attach {}\n", pp.pimpl->subprocess->child);
-    proc.write(to_write);
-    return p.pimpl->subprocess->child;
+    gdb.write(fmt::format("attach {}\n", pp.pimpl->proc.get()->child));
+    return pp.pimpl->proc.get()->child;
 }
 #endif
 
-Process Gdb::debug(std::string_view pp, std::string_view gdb_server_args) {
-    const char *script_path = "/tmp/gdb_script.txt";
-    uint16_t port           = DEFAULT_GDB_SERVER_PORT;
-    write_gdb_script(script_path, port, gdb_server_args);
-    std::string gdb_args =
-        fmt::format("{} gdb -x {} -q {}", CONTEXT.terminal, script_path, pp);
-    std::string gdb_server_cmd =
-        fmt::format("gdbserver localhost:{} {}", port, pp);
-    auto p = Process(gdb_server_cmd.c_str());
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(DEFAULT_SLEEP_MILLIS)
+Process Gdb::debug(std::string_view program, std::string_view extra) {
+    TempFile script(".gdb");
+    write_gdb_script(script.path, DEFAULT_GDB_PORT, extra);
+
+    Process gs(
+        fmt::format("gdbserver localhost:{} {}", DEFAULT_GDB_PORT, program), ""
     );
-    auto proc = Process{gdb_args.c_str()};
-    return p;
+    std::this_thread::sleep_for(DEFAULT_SLEEP);
+
+    Process gdb(
+        fmt::format(
+            "{} gdb -x {} -q {}",
+            CONTEXT.terminal,
+            script.path.string(),
+            program
+        ),
+        ""
+    );
+    return gs;
 }
+
 } // namespace xcft

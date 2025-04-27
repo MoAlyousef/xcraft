@@ -28,16 +28,14 @@ endif()
 
 find_package(fmt CONFIG REQUIRED)
 find_package(LIEF CONFIG REQUIRED)
-find_package(capstone CONFIG REQUIRED)
-find_package(keystone CONFIG REQUIRED)
+find_package(cornerstone CONFIG REQUIRED)
 find_package(googletest CONFIG)
 
 set(XCFT_LIB_FORM)
 if (XCFT_BUILD_SHARED)
   set(XCFT_LIB_FORM SHARED)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  set_target_properties(capstone PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  set_target_properties(keystone PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  set_target_properties(cornerstone PROPERTIES POSITION_INDEPENDENT_CODE ON)
   set_target_properties(LIB_LIEF PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
@@ -75,7 +73,6 @@ target_include_directories(xcraft PUBLIC
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
 )
 target_include_directories(xcraft PRIVATE 
-  ${keystone_SOURCE_DIR}/include 
   ${asio_SOURCE_DIR}/asio/include
   ${subprocess_SOURCE_DIR}
   ${magic_enum_SOURCE_DIR}/include/magic_enum
@@ -83,8 +80,7 @@ target_include_directories(xcraft PRIVATE
 target_link_libraries(xcraft PRIVATE 
   fmt::fmt 
   LIEF::LIEF 
-  capstone
-  keystone
+  cornerstone::cornerstone
 )
 if(MINGW)
   target_link_libraries(xcraft PUBLIC ws2_32)
@@ -115,7 +111,7 @@ if(XCFT_BUILD_SHARED)
   )
 else()
   install(
-    TARGETS fmt capstone keystone LIB_LIEF
+    TARGETS fmt cornerstone LIB_LIEF
     EXPORT xcraftConfig
     ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
@@ -130,7 +126,7 @@ else()
   )
 
   export(
-    TARGETS xcraft fmt capstone keystone LIB_LIEF
+    TARGETS xcraft fmt cornerstone LIB_LIEF
     NAMESPACE xcft::
     FILE "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfig.cmake"
   )

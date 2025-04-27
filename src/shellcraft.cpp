@@ -1,8 +1,7 @@
 #include <bit>
-#include <capstone/capstone.h>
+#include <cornerstone/cornerstone.hpp>
 #include <cstring>
 #include <fmt/format.h>
-#include <keystone/keystone.h>
 #include <stdexcept>
 #include <xcraft/context.hpp>
 #include <xcraft/enums.hpp>
@@ -52,34 +51,18 @@ const char *LINUX_X86_SH = R"lit(push 0x68
     pop eax
     int 0x80)lit";
 
-std::pair<cs_arch, cs_mode> convert_arch_to_cs(xcft::Architecture arch) {
+cstn::Arch convert_arch_to_cs(xcft::Architecture arch) {
     using xcft::Architecture;
+    using namespace cstn;
     switch (arch) {
     case Architecture::X86_64:
-        return std::make_pair(CS_ARCH_X86, CS_MODE_64);
+        return Arch::x86_64;
     case Architecture::X86:
-        return std::make_pair(CS_ARCH_X86, CS_MODE_32);
+        return Arch::x86;
     case Architecture::Arm:
-        return std::make_pair(CS_ARCH_ARM, CS_MODE_32);
+        return Arch::arm;
     case Architecture::Aarch64:
-        return std::make_pair(CS_ARCH_ARM, CS_MODE_64);
-    case Architecture::Other:
-    default:
-        throw std::runtime_error("Architecture not implemented!");
-    }
-}
-
-std::pair<ks_arch, ks_mode> convert_arch_to_ks(xcft::Architecture arch) {
-    using xcft::Architecture;
-    switch (arch) {
-    case Architecture::X86_64:
-        return std::make_pair(KS_ARCH_X86, KS_MODE_64);
-    case Architecture::X86:
-        return std::make_pair(KS_ARCH_X86, KS_MODE_32);
-    case Architecture::Arm:
-        return std::make_pair(KS_ARCH_ARM, KS_MODE_32);
-    case Architecture::Aarch64:
-        return std::make_pair(KS_ARCH_ARM, KS_MODE_64);
+        return Arch::aarch64;
     case Architecture::Other:
     default:
         throw std::runtime_error("Architecture not implemented!");
@@ -92,39 +75,9 @@ namespace xcft {
 std::string disassemble(
     std::string_view code, Architecture arch, std::optional<size_t> address
 ) {
-    csh handle    = 0;
-    cs_insn *insn = nullptr;
-    size_t count  = 0;
-
-    const auto [a, m] = convert_arch_to_cs(arch);
-
-    if (cs_open(a, m, &handle) != CS_ERR_OK)
-        throw std::runtime_error("Bad assembly entry");
-    std::string ret;
-    count = cs_disasm(
-        handle,
-        std::bit_cast<const unsigned char *>(code.data()),
-        code.size(),
-        address ? *address : 0,
-        0,
-        &insn
-    );
-    if (count > 0) {
-        for (size_t j = 0; j < count; j++) {
-            auto i = insn[j];
-            if (address)
-                ret += fmt::format(
-                    "0x{:016x}\t{}\t\t{}\n", i.address, i.mnemonic, i.op_str
-                );
-            else
-                ret += fmt::format("{}\t{}\n", i.mnemonic, i.op_str);
-        }
-        cs_free(insn, count);
-    } else
-        throw std::runtime_error("Bad assembly entry");
-
-    cs_close(&handle);
-    return ret;
+    const auto a = convert_arch_to_cs(arch);
+    auto engine  = cstn::Engine::create(cstn::Opts{.arch = a}).unwrap();
+    return engine.disassemble(code, address ? *address : 0).unwrap();
 }
 
 std::string disassemble(std::string_view code, std::optional<size_t> address) {
@@ -132,33 +85,9 @@ std::string disassemble(std::string_view code, std::optional<size_t> address) {
 }
 
 std::string assemble(const char *code, Architecture arch) {
-    ks_engine *ks         = nullptr;
-    ks_err err            = {};
-    size_t count          = 0;
-    unsigned char *encode = nullptr;
-    size_t size           = 0;
-    const auto [a, m]     = convert_arch_to_ks(arch);
-    std::string ret;
-    err = ks_open(a, m, &ks);
-    if (err != KS_ERR_OK) {
-        throw std::runtime_error("Couldn't assemble entry");
-    }
-
-    if (ks_asm(ks, code, 0, &encode, &size, &count) != KS_ERR_OK) {
-        throw std::runtime_error(
-            fmt::format(
-                "Couldn't assemble entry: {}", ks_strerror(ks_errno(ks))
-            )
-        );
-    } else {
-        for (size_t i = 0; i < size; i++) {
-            ret += (char)encode[i];
-        }
-    }
-
-    ks_free(encode);
-    ks_close(ks);
-    return ret;
+    const auto a = convert_arch_to_cs(arch);
+    auto engine  = cstn::Engine::create(cstn::Opts{.arch = a}).unwrap();
+    return engine.assemble(code).unwrap();
 }
 
 std::string assemble(const char *code) { return assemble(code, CONTEXT.arch); }

@@ -1,12 +1,12 @@
 #pragma once
 
 #include <LIEF/LIEF.hpp>
-#include <capstone/capstone.h>
+#include <cornerstone/cornerstone.hpp>
 #include <set>
 #include <utility>
 
 namespace xcft {
-std::pair<cs_arch, cs_mode> get_capstone_arch(
+cstn::Arch get_cstn_arch(
     LIEF::ARCHITECTURES larch, const std::set<LIEF::MODES> &lmodes
 );
 }

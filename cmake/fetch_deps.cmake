@@ -24,7 +24,7 @@ FetchContent_Declare(
   SOURCE_SUBDIR  blah
 )
 
-# source libs: fmt LIEF capstone keystone
+# source libs: fmt LIEF cornerstone
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
@@ -55,28 +55,16 @@ FetchContent_Declare(
   OVERRIDE_FIND_PACKAGE
 )
 
-set(CAPSTONE_X86_ATT_DISABLE ON)
-set(CAPSTONE_BUILD_TESTS OFF)
-set(CAPSTONE_BUILD_CSTOOL OFF)
-set(CAPSTONE_BUILD_STATIC_LIBS ON)
+set(CORNERSTONE_BUILD_SHARED OFF)
 FetchContent_Declare(
-  capstone
-  GIT_REPOSITORY https://github.com/capstone-engine/capstone
-  GIT_TAG        6.0.0-Alpha2
+  cornerstone
+  GIT_REPOSITORY https://github.com/MoAlyousef/cornerstone
+  GIT_TAG main
   GIT_SHALLOW    True
   OVERRIDE_FIND_PACKAGE
 )
 
-set(BUILD_LIBS_ONLY ON CACHE BOOL " " FORCE)
-FetchContent_Declare(
-  keystone
-  GIT_REPOSITORY https://github.com/keystone-engine/keystone
-  GIT_TAG        master
-  GIT_SHALLOW    True
-  OVERRIDE_FIND_PACKAGE
-)
-
-FetchContent_MakeAvailable(asio subprocess magic_enum capstone keystone lief fmt)
+FetchContent_MakeAvailable(asio subprocess magic_enum cornerstone lief fmt)
 
 if (XCFT_BUILD_TESTS)
 FetchContent_Declare(

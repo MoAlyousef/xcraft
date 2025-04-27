@@ -1,36 +1,35 @@
 #include "bin_utils.hpp"
 
 namespace xcft {
-std::pair<cs_arch, cs_mode> get_capstone_arch(
+cstn::Arch get_cstn_arch(
     LIEF::ARCHITECTURES larch, const std::set<LIEF::MODES> &lmodes
 ) {
-    cs_arch arch = CS_ARCH_X86;
-    cs_mode mode = CS_MODE_LITTLE_ENDIAN;
+    using namespace cstn;
+    Arch arch = Arch::x86;
     switch (larch) {
     case LIEF::ARCHITECTURES::ARCH_ARM:
-        arch = CS_ARCH_ARM;
+        arch = Arch::arm;
         break;
     case LIEF::ARCHITECTURES::ARCH_ARM64:
-        arch = CS_ARCH_AARCH64;
+        arch = Arch::aarch64;
         break;
     case LIEF::ARCHITECTURES::ARCH_X86:
-        arch = CS_ARCH_X86;
+        for (const auto &m : lmodes) {
+            switch (m) {
+            case LIEF::MODES::MODE_32:
+                arch = Arch::x86;
+                break;
+            case LIEF::MODES::MODE_64:
+                arch = Arch::x86_64;
+                break;
+            default:
+                continue;
+            }
+        }
         break;
     default:
         throw std::runtime_error("Unsupported architecture");
     }
-    for (const auto &m : lmodes) {
-        switch (m) {
-        case LIEF::MODES::MODE_32:
-            mode = CS_MODE_32;
-            break;
-        case LIEF::MODES::MODE_64:
-            mode = CS_MODE_64;
-            break;
-        default:
-            continue;
-        }
-    }
-    return std::make_pair(arch, mode);
+    return arch;
 }
 } // namespace xcft

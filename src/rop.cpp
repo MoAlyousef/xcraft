@@ -1,5 +1,5 @@
 #include "bin_utils.hpp"
-#include <capstone/capstone.h>
+#include <cornerstone/cornerstone.hpp>
 #include <fmt/format.h>
 #include <set>
 #include <span>
@@ -10,27 +10,21 @@
 namespace xcft {
 
 namespace {
-bool is_gadget_end(const cs_insn &insn) {
-    return strcmp(insn.mnemonic, "ret") == 0 ||
-           strcmp(insn.mnemonic, "call") == 0 ||
-           strcmp(insn.mnemonic, "syscall") == 0 ||
-           strcmp(insn.mnemonic, "int") == 0 || strcmp(insn.mnemonic, "j") == 0;
+bool is_gadget_end(const cstn::Instruction &insn) {
+    return insn.mnemonic == "ret" || insn.mnemonic == "call" ||
+           insn.mnemonic == "syscall" || insn.mnemonic == "int" ||
+           insn.mnemonic.find("j") == 0;
 }
 
 std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     constexpr size_t depth               = 13;
     std::unique_ptr<LIEF::Binary> reader = LIEF::Parser::parse(path.string());
     auto header                          = reader->header();
-    auto [arch, mode] =
-        get_capstone_arch(header.architecture(), header.modes());
-    csh handle = 0;
-    if (cs_open(arch, mode, &handle) != CS_ERR_OK) {
-        throw std::runtime_error("Failed to initialize Capstone disassembler.");
-    }
+    cstn::Opts opts{};
+    opts.arch = get_cstn_arch(header.architecture(), header.modes());
+    auto eng  = cstn::Engine::create(opts).unwrap();
 
     std::vector<Gadget> gadgets;
-    cs_insn *insn = nullptr;
-    size_t count  = 0;
 
     for (auto &section : reader->sections()) {
         auto elf_sec = dynamic_cast<LIEF::ELF::Section *>(&section);
@@ -45,16 +39,16 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
              m_sec->has(
                  LIEF::MachO::MACHO_SECTION_FLAGS::S_ATTR_PURE_INSTRUCTIONS
              ))) {
-            count = cs_disasm(
-                handle,
-                section.content().data(),
-                section.size(),
-                section.virtual_address(),
-                0,
-                &insn
-            );
-            if (count > 0) {
-                for (size_t i = 0; i < count; i++) {
+            auto insn = eng.disassemble_insns(
+                               std::string_view(
+                                   (const char *)section.content().data(),
+                                   section.size()
+                               ),
+                               section.virtual_address()
+            )
+                            .unwrap();
+            if (!insn.empty()) {
+                for (size_t i = 0; i < insn.size(); i++) {
                     if (std::string_view(insn[i].mnemonic) == "ret") {
                         size_t start = i;
                         while (start > 0 && (insn[i].address -
@@ -67,10 +61,11 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
                             Instruction instruction;
                             instruction.address = insn[j].address;
                             instruction.bytes   = std::string(
-                                insn[j].bytes, insn[j].bytes + insn[j].size
+                                (const char *)insn[j].bytes.data(),
+                                insn[j].bytes.size()
                             );
                             instruction.assembly = insn[j].mnemonic;
-                            if (strlen(insn[j].op_str) != 0) {
+                            if (insn[j].op_str.size() != 0) {
                                 instruction.assembly += " ";
                                 instruction.assembly += insn[j].op_str;
                             }
@@ -83,12 +78,10 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
                         }
                     }
                 }
-                cs_free(insn, count);
             }
         }
     }
 
-    cs_close(&handle);
     return gadgets;
 }
 
@@ -126,8 +119,7 @@ ROP::ROP(fs::path p) : path_(std::move(p)) {
 
 const std::vector<Gadget> &ROP::gadgets() { return gadgets_; }
 
-std::vector<size_t> ROP::find_gadget(
-    std::initializer_list<std::string_view> seq
+std::vector<size_t> ROP::find_gadget(std::initializer_list<std::string_view> seq
 ) {
     return find_rop_gadget(gadgets_, seq);
 }

@@ -39,14 +39,15 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
              m_sec->has(
                  LIEF::MachO::MACHO_SECTION_FLAGS::S_ATTR_PURE_INSTRUCTIONS
              ))) {
-            auto insn = eng.disassemble_insns(
-                               std::string_view(
-                                   (const char *)section.content().data(),
-                                   section.size()
-                               ),
-                               section.virtual_address()
+            auto il = eng.disassemble(
+                             std::string_view(
+                                 (const char *)section.content().data(),
+                                 section.size()
+                             ),
+                             section.virtual_address()
             )
-                            .unwrap();
+                          .unwrap();
+            auto &insn = il.insns;
             if (!insn.empty()) {
                 for (size_t i = 0; i < insn.size(); i++) {
                     if (std::string_view(insn[i].mnemonic) == "ret") {

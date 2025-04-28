@@ -77,7 +77,9 @@ std::string disassemble(
 ) {
     const auto a = convert_arch_to_cs(arch);
     auto engine  = cstn::Engine::create(cstn::Opts{.arch = a}).unwrap();
-    return engine.disassemble(code, address ? *address : 0).unwrap();
+    return engine.disassemble(code, address ? *address : 0)
+        .unwrap()
+        .pretty_format();
 }
 
 std::string disassemble(std::string_view code, std::optional<size_t> address) {

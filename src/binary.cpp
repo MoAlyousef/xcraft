@@ -30,7 +30,7 @@ address_map extract_strings_from_section(
                 beg = cur;
         } else {
             if (beg && static_cast<size_t>(cur - beg) >= min_len) {
-                std::string s(reinterpret_cast<const char *>(beg), cur - beg);
+                std::string s(std::bit_cast<const char *>(beg), cur - beg);
                 out[s] = vaddr + (beg - buf.data());
             }
             beg = nullptr;
@@ -38,7 +38,7 @@ address_map extract_strings_from_section(
         ++cur;
     }
     if (beg && static_cast<size_t>(cur - beg) >= min_len) {
-        std::string s(reinterpret_cast<const char *>(beg), cur - beg);
+        std::string s(std::bit_cast<const char *>(beg), cur - beg);
         out[s] = vaddr + (beg - buf.data());
     }
     return out;
@@ -131,16 +131,16 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
             continue;
 
         /* --- disassemble --------------------------------------------- */
-        auto ins =
-            eng.disassemble_insns(
-                   std::string_view(
-                       reinterpret_cast<const char *>(sec.content().data()),
-                       sec.content().size()
-                   ),
-                   sec.virtual_address(),
-                   false
-            )
-                .unwrap();
+        auto il = eng.disassemble(
+                         std::string_view(
+                             std::bit_cast<const char *>(sec.content().data()),
+                             sec.content().size()
+                         ),
+                         sec.virtual_address(),
+                         false
+        )
+                      .unwrap();
+        auto &ins = il.insns;
         if (ins.empty())
             continue;
 

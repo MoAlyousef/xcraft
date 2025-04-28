@@ -22,10 +22,9 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     auto header                          = reader->header();
     cstn::Opts opts{};
     auto tgt = make_cstn_target(header.architecture(), header.modes(), header.endianness());
-    opts.arch = tgt.arch;
     opts.cpu = tgt.cpu;
     opts.features = tgt.features;
-    auto eng  = cstn::Engine::create(opts).unwrap();
+    auto eng  = cstn::Engine::create(tgt.arch, opts).unwrap();
 
     std::vector<Gadget> gadgets;
 

@@ -105,7 +105,7 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
     );
 
     auto eng =
-        cstn::Engine::create({.arch = tgt.arch, .syntax = cstn::Syntax::Intel, .cpu = tgt.cpu, .features = tgt.features})
+        cstn::Engine::create(tgt.arch, {.syntax = cstn::Syntax::Intel, .cpu = tgt.cpu, .features = tgt.features})
             .unwrap();
 
     std::vector<std::string> pat(seq.begin(), seq.end());

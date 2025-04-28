@@ -21,7 +21,10 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     std::unique_ptr<LIEF::Binary> reader = LIEF::Parser::parse(path.string());
     auto header                          = reader->header();
     cstn::Opts opts{};
-    opts.arch = get_cstn_arch(header.architecture(), header.modes());
+    auto tgt = make_cstn_target(header.architecture(), header.modes(), header.endianness());
+    opts.arch = tgt.arch;
+    opts.cpu = tgt.cpu;
+    opts.features = tgt.features;
     auto eng  = cstn::Engine::create(opts).unwrap();
 
     std::vector<Gadget> gadgets;

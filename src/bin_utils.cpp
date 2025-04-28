@@ -1,35 +1,56 @@
 #include "bin_utils.hpp"
 
 namespace xcft {
-cstn::Arch get_cstn_arch(
-    LIEF::ARCHITECTURES larch, const std::set<LIEF::MODES> &lmodes
+CstnTarget make_cstn_target(
+    LIEF::ARCHITECTURES a, const std::set<LIEF::MODES> &m, LIEF::ENDIANNESS e
 ) {
-    using namespace cstn;
-    Arch arch = Arch::x86;
-    switch (larch) {
-    case LIEF::ARCHITECTURES::ARCH_ARM:
-        arch = Arch::arm;
-        break;
-    case LIEF::ARCHITECTURES::ARCH_ARM64:
-        arch = Arch::aarch64;
-        break;
+    using LIEF::ENDIANNESS;
+    using LIEF::MODES;
+
+    CstnTarget t{};
+
+    switch (a) {
     case LIEF::ARCHITECTURES::ARCH_X86:
-        for (const auto &m : lmodes) {
-            switch (m) {
-            case LIEF::MODES::MODE_32:
-                arch = Arch::x86;
-                break;
-            case LIEF::MODES::MODE_64:
-                arch = Arch::x86_64;
-                break;
-            default:
-                continue;
-            }
+        if (m.count(MODES::MODE_64)) {
+            t.arch = cstn::Arch::x86_64;
+            t.cpu  = "x86-64";
+        } else {
+            t.arch = cstn::Arch::x86;
+            t.cpu  = "pentium";
         }
         break;
+
+    case LIEF::ARCHITECTURES::ARCH_ARM:
+        t.arch = cstn::Arch::arm;
+        t.cpu  = (e == ENDIANNESS::ENDIAN_BIG) ? "armeb" : "arm";
+        if (m.count(MODES::MODE_THUMB))
+            t.features += "+thumb-mode,+thumb2,";
+        break;
+
+    case LIEF::ARCHITECTURES::ARCH_ARM64:
+        t.arch = cstn::Arch::aarch64;
+        t.cpu  = (e == ENDIANNESS::ENDIAN_BIG)
+                     ? "aarch64_be"
+                     : "aarch64";
+        break;
+
+    case LIEF::ARCHITECTURES::ARCH_RISCV:
+        if (m.count(MODES::MODE_64)) {
+            t.arch = cstn::Arch::riscv64;
+            t.cpu  = (e == ENDIANNESS::ENDIAN_BIG) ? "riscv64be" : "riscv64";
+        } else {
+            t.arch = cstn::Arch::riscv32;
+            t.cpu  = (e == ENDIANNESS::ENDIAN_BIG) ? "riscv32be" : "riscv32";
+        }
+        break;
+
     default:
-        throw std::runtime_error("Unsupported architecture");
+        throw std::runtime_error("Unsupported architecture in LIEF header");
     }
-    return arch;
+
+    if (!t.features.empty() && t.features.back() == ',')
+        t.features.pop_back();
+
+    return t;
 }
 } // namespace xcft

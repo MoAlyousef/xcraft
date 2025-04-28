@@ -100,12 +100,12 @@ address_map &Binary::symbols() const { return pimpl->syms; }
 
 std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
 ) {
-    auto arch = get_cstn_arch(
-        pimpl->bin->header().architecture(), pimpl->bin->header().modes()
+    auto tgt = make_cstn_target(
+        pimpl->bin->header().architecture(), pimpl->bin->header().modes(), pimpl->bin->header().endianness()
     );
 
     auto eng =
-        cstn::Engine::create({.arch = arch, .syntax = cstn::Syntax::Intel})
+        cstn::Engine::create({.arch = tgt.arch, .syntax = cstn::Syntax::Intel, .cpu = tgt.cpu, .features = tgt.features})
             .unwrap();
 
     std::vector<std::string> pat(seq.begin(), seq.end());

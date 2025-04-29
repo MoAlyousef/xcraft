@@ -92,6 +92,11 @@ struct TempFile {
             );
     }
 
+    TempFile(const TempFile &)            = delete;
+    TempFile &operator=(const TempFile &) = delete;
+    TempFile(TempFile &&)                 = delete;
+    TempFile &operator=(TempFile &&)      = delete;
+
     ~TempFile() {
         std::error_code ec;
         std::filesystem::remove(path, ec);
@@ -115,6 +120,11 @@ namespace xcft {
 
 struct SubprocessWrapper {
     subprocess_s s{};
+    SubprocessWrapper()                                     = default;
+    SubprocessWrapper(const SubprocessWrapper &)            = delete;
+    SubprocessWrapper &operator=(const SubprocessWrapper &) = delete;
+    SubprocessWrapper(SubprocessWrapper &&)                 = delete;
+    SubprocessWrapper &operator=(SubprocessWrapper &&)      = delete;
     ~SubprocessWrapper() { subprocess_destroy(&s); }
     subprocess_s *get() { return &s; }
 };
@@ -167,7 +177,7 @@ Process::Process(std::string_view args, std::string_view env)
 
 static std::string read_stream(FILE *f, std::function<bool(int)> pred) {
     std::string out;
-    int ch;
+    int ch = EOF;
     while ((ch = fgetc(f)) != EOF) {
         if (pred && pred(ch))
             break;
@@ -200,8 +210,8 @@ std::string Process::readall() {
 }
 
 static void write_raw(FILE *f, std::string_view s) {
-    fwrite(s.data(), 1, s.size(), f);
-    fflush(f);
+    (void)fwrite(s.data(), 1, s.size(), f);
+    (void)fflush(f);
 }
 void Process::write(std::string_view s) {
     write_raw(pimpl->proc.get()->stdin_file, s);
@@ -211,13 +221,12 @@ void Process::writeln(std::string_view s) {
         write_raw(pimpl->proc.get()->stdin_file, "\n");
 }
 void Process::write(char c) {
-    fputc(c, pimpl->proc.get()->stdin_file);
-    fflush(pimpl->proc.get()->stdin_file);
+    (void)fputc(c, pimpl->proc.get()->stdin_file);
+    (void)fflush(pimpl->proc.get()->stdin_file);
 }
 
 void Process::interactive() {
     auto *out = pimpl->proc.get()->stdout_file;
-    auto *in  = pimpl->proc.get()->stdin_file;
 
     std::atomic<bool> stop{false};
     std::thread t([&] {
@@ -225,8 +234,8 @@ void Process::interactive() {
             int ch = fgetc(out);
             if (ch == EOF)
                 break;
-            fputc(ch, stdout);
-            fflush(stdout);
+            (void)fputc(ch, stdout);
+            (void)fflush(stdout);
         }
     });
 
@@ -288,7 +297,7 @@ void Remote::writeln(std::string_view s) {
 void Remote::write(char c) { asio::write(pimpl->sock, asio::buffer(&c, 1)); }
 
 void Remote::interactive() {
-    std::array<char, 1024> buf;
+    std::array<char, 1024> buf{};
     std::atomic<bool> done{false};
 
     std::function<void()> start_read;

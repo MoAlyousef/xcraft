@@ -12,9 +12,7 @@
 #include <xcraft/binary.hpp>
 namespace xcft {
 
-/* ------------------------------------------------------------------ */
-/* small helpers                                                       */
-
+// NOLINTNEXTLINE
 static bool printable(unsigned char c) { return c >= 32 && c <= 126; }
 
 address_map extract_strings_from_section(
@@ -53,8 +51,6 @@ address_map extract_strings(const LIEF::Binary &bin, size_t min_len = 4) {
     return all;
 }
 
-/* ------------------------------------------------------------------ */
-
 struct Binary::Impl {
     fs::path path;
     std::unique_ptr<LIEF::Binary> bin;
@@ -88,9 +84,6 @@ struct Binary::Impl {
     }
 };
 
-/* ------------------------------------------------------------------ */
-/*  public interface                                                   */
-
 Binary::Binary(const fs::path &p) : pimpl(std::make_shared<Impl>(p)) {}
 
 Bits Binary::bits() const { return pimpl->bits; }
@@ -112,7 +105,6 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
     std::vector<size_t> hits;
 
     for (const auto &sec : pimpl->bin->sections()) {
-        /* --- executable? --------------------------------------------- */
         const auto *elf  = dynamic_cast<const LIEF::ELF::Section *>(&sec);
         const auto *pe   = dynamic_cast<const LIEF::PE::Section *>(&sec);
         const auto *mach = dynamic_cast<const LIEF::MachO::Section *>(&sec);
@@ -130,7 +122,6 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
         if (!exec)
             continue;
 
-        /* --- disassemble --------------------------------------------- */
         auto il = eng.disassemble(
                          std::string_view(
                              std::bit_cast<const char *>(sec.content().data()),

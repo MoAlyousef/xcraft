@@ -13,7 +13,7 @@ namespace {
 bool is_gadget_end(const cstn::Instruction &insn) {
     return insn.mnemonic == "ret" || insn.mnemonic == "call" ||
            insn.mnemonic == "syscall" || insn.mnemonic == "int" ||
-           insn.mnemonic.find("j") == 0;
+           insn.mnemonic.starts_with("j");
 }
 
 std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
@@ -21,10 +21,12 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     std::unique_ptr<LIEF::Binary> reader = LIEF::Parser::parse(path.string());
     auto header                          = reader->header();
     cstn::Opts opts{};
-    auto tgt = make_cstn_target(header.architecture(), header.modes(), header.endianness());
-    opts.cpu = tgt.cpu;
+    auto tgt = make_cstn_target(
+        header.architecture(), header.modes(), header.endianness()
+    );
+    opts.cpu      = tgt.cpu;
     opts.features = tgt.features;
-    auto eng  = cstn::Engine::create(tgt.arch, opts).unwrap();
+    auto eng      = cstn::Engine::create(tgt.arch, opts).unwrap();
 
     std::vector<Gadget> gadgets;
 
@@ -43,7 +45,10 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
              ))) {
             auto il = eng.disassemble(
                              std::string_view(
-                                 (const char *)section.content().data(),
+                                 // NOLINTNEXTLINE
+                                 reinterpret_cast<const char *>(
+                                     section.content().data()
+                                 ),
                                  section.size()
                              ),
                              section.virtual_address()
@@ -64,7 +69,10 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
                             Instruction instruction;
                             instruction.address = insn[j].address;
                             instruction.bytes   = std::string(
-                                (const char *)insn[j].bytes.data(),
+                                // NOLINTNEXTLINE
+                                reinterpret_cast<const char *>(
+                                    insn[j].bytes.data()
+                                ),
                                 insn[j].bytes.size()
                             );
                             instruction.assembly = insn[j].mnemonic;
@@ -108,7 +116,7 @@ std::vector<size_t> find_rop_gadget(
         if (d < insn.size())
             addresses.insert(insn[d].address);
     }
-    return std::vector(addresses.begin(), addresses.end());
+    return {addresses.begin(), addresses.end()};
 }
 } // namespace
 

@@ -24,33 +24,11 @@ FetchContent_Declare(
   SOURCE_SUBDIR  blah
 )
 
-# source libs: fmt LIEF cornerstone
+# source libs: fmt cornerstone LLVM
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
   GIT_TAG        11.0.2
-  GIT_SHALLOW    True
-  OVERRIDE_FIND_PACKAGE
-)
-
-set(LIEF_USE_CCACHE OFF)
-set(LIEF_C_API OFF)
-set(LIEF_EXAMPLES OFF)
-set(LIEF_LOGGING OFF)
-set(LIEF_LOGGING_DEBUG OFF)
-set(LIEF_ENABLE_JSON OFF)
-set(LIEF_DEX OFF)
-set(LIEF_ART OFF)
-set(LIEF_OAT OFF)
-set(LIEF_VDEX OFF)
-set(LIEF_OAT_SUPPORT OFF)
-set(LIEF_DEX_SUPPORT OFF)
-set(LIEF_VDEX_SUPPORT OFF)
-set(LIEF_ART_SUPPORT OFF)
-FetchContent_Declare(
-  lief
-  GIT_REPOSITORY https://github.com/lief-project/LIEF
-  GIT_TAG        0.14.1
   GIT_SHALLOW    True
   OVERRIDE_FIND_PACKAGE
 )
@@ -64,7 +42,7 @@ FetchContent_Declare(
   OVERRIDE_FIND_PACKAGE
 )
 
-FetchContent_MakeAvailable(asio subprocess magic_enum cornerstone lief fmt)
+FetchContent_MakeAvailable(asio subprocess magic_enum cornerstone fmt)
 
 if (XCFT_BUILD_TESTS)
 FetchContent_Declare(

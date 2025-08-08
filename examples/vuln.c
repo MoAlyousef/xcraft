@@ -1,5 +1,5 @@
 // compile with:
-// gcc -o bin/vuln examples/vuln.c -zexecstack -fno-stack-protector -no-pie -D_FORTIFY_SOURCE=0
+// gcc -o bin/vuln examples/vuln.c -fpermissive -zexecstack -fno-stack-protector -no-pie -D_FORTIFY_SOURCE=0
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -27,16 +27,18 @@ endif()
 
 
 find_package(fmt CONFIG REQUIRED)
-find_package(LIEF CONFIG REQUIRED)
 find_package(cornerstone CONFIG REQUIRED)
+find_package(LLVM REQUIRED CONFIG)
 find_package(googletest CONFIG)
+
+# Set up LLVM
+llvm_map_components_to_libnames(llvm_libs Object Support BinaryFormat)
 
 set(XCFT_LIB_FORM)
 if (XCFT_BUILD_SHARED)
   set(XCFT_LIB_FORM SHARED)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
   set_target_properties(cornerstone PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  set_target_properties(LIB_LIEF PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 # set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
@@ -64,7 +66,8 @@ add_library(xcraft ${XCFT_LIB_FORM}
   src/shellcraft.cpp 
   src/rop.cpp 
   src/context.cpp
-  src/bin_utils.cpp)
+  src/bin_utils.cpp
+  src/llvm_object_utils.cpp)
 
 add_library(xcft::xcft ALIAS xcraft)
 target_compile_features(xcraft PUBLIC cxx_std_20)
@@ -76,11 +79,12 @@ target_include_directories(xcraft PRIVATE
   ${asio_SOURCE_DIR}/asio/include
   ${subprocess_SOURCE_DIR}
   ${magic_enum_SOURCE_DIR}/include/magic_enum
+  ${LLVM_INCLUDE_DIRS}
 )
 target_link_libraries(xcraft PRIVATE 
   fmt::fmt 
-  LIEF::LIEF 
   cornerstone::cornerstone
+  ${llvm_libs}
 )
 if(MINGW)
   target_link_libraries(xcraft PUBLIC ws2_32)
@@ -111,7 +115,7 @@ if(XCFT_BUILD_SHARED)
   )
 else()
   install(
-    TARGETS fmt cornerstone LIB_LIEF
+    TARGETS fmt cornerstone
     EXPORT xcraftConfig
     ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
@@ -126,7 +130,7 @@ else()
   )
 
   export(
-    TARGETS xcraft fmt cornerstone LIB_LIEF
+    TARGETS xcraft fmt cornerstone
     NAMESPACE xcft::
     FILE "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfig.cmake"
   )
@@ -154,6 +158,8 @@ if(XCFT_BUILD_EXAMPLES)
   target_link_libraries(bof_remote PRIVATE xcft::xcft)
   add_executable(rop examples/rop.cpp)
   target_link_libraries(rop PRIVATE xcft::xcft)
+  # add_executable(debug_libc_test debug_libc_test.cpp)
+  # target_link_libraries(debug_libc_test PRIVATE xcft::xcft)
 endif()
 
 if(XCFT_BUILD_TESTS AND googletest_FOUND)

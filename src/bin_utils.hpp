@@ -1,6 +1,6 @@
 #pragma once
 
-#include <LIEF/LIEF.hpp>
+#include "llvm_object_utils.hpp"
 #include <cornerstone/cornerstone.hpp>
 #include <set>
 #include <utility>
@@ -12,7 +12,5 @@ struct CstnTarget {
 };
 
 namespace xcft {
-CstnTarget make_cstn_target(
-    LIEF::ARCHITECTURES a, const std::set<LIEF::MODES> &m, LIEF::ENDIANNESS e
-);
+CstnTarget make_cstn_target(const BinaryInfo& binary_info);
 }

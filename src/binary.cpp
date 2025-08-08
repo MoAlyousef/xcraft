@@ -1,5 +1,5 @@
 #include "bin_utils.hpp"
-#include <LIEF/LIEF.hpp>
+#include "llvm_object_utils.hpp"
 #include <bit>
 #include <cornerstone/cornerstone.hpp>
 #include <fmt/format.h>
@@ -42,18 +42,11 @@ address_map extract_strings_from_section(
     return out;
 }
 
-address_map extract_strings(const LIEF::Binary &bin, size_t min_len = 4) {
-    address_map all;
-    for (const auto &sec : bin.sections())
-        all.merge(extract_strings_from_section(
-            sec.content(), sec.virtual_address(), min_len
-        ));
-    return all;
-}
+// This function is no longer needed as LLVM Object wrapper handles string extraction
 
 struct Binary::Impl {
     fs::path path;
-    std::unique_ptr<LIEF::Binary> bin;
+    std::unique_ptr<LLVMObjectFile> llvm_obj;   // LLVM Object wrapper
     Endian endian    = Endian::Little;
     Bits bits        = Bits::Bits64;
     bool has_canary  = false;
@@ -62,25 +55,22 @@ struct Binary::Impl {
     mutable std::optional<address_map> strings_cache;
 
     explicit Impl(const fs::path &p)
-        : path(p), bin(LIEF::Parser::parse(p.string())) {
+        : path(p), llvm_obj(std::make_unique<LLVMObjectFile>(p)) {
         if (!fs::exists(path))
             throw std::runtime_error(
                 fmt::format("File doesn't exist: {}", path.string())
             );
 
-        bits   = bin->header().is_64() ? Bits::Bits64 : Bits::Bits32;
-        endian = bin->header().endianness() == LIEF::ENDIAN_BIG
-                     ? Endian::Big
-                     : Endian::Little;
-
-        for (const auto &s : bin->symbols()) {
-            const auto &name = s.name();
-            if (name.starts_with("__stack_chk") ||
-                name.starts_with("__security_cookie"))
-                has_canary = true;
-            if (s.value())
-                syms[name] = s.value();
-        }
+        // Use LLVM Object for basic info
+        auto info = llvm_obj->get_info();
+        bits = info.is_64bit ? Bits::Bits64 : Bits::Bits32;
+        endian = info.endianness == LLVMEndianness::Big ? Endian::Big : Endian::Little;
+        
+        // Use LLVM Object for symbols
+        syms = llvm_obj->get_symbols();
+        
+        // Check for stack canaries
+        has_canary = llvm_obj->has_stack_canaries();
     }
 };
 
@@ -88,46 +78,46 @@ Binary::Binary(const fs::path &p) : pimpl(std::make_shared<Impl>(p)) {}
 
 Bits Binary::bits() const { return pimpl->bits; }
 fs::path Binary::path() const { return pimpl->path; }
-void *Binary::bin() { return pimpl->bin.get(); }
+void *Binary::bin() { return pimpl->llvm_obj.get(); }
 address_map &Binary::symbols() const { return pimpl->syms; }
 
 std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
 ) {
-    auto tgt = make_cstn_target(
-        pimpl->bin->header().architecture(), pimpl->bin->header().modes(), pimpl->bin->header().endianness()
-    );
-
-    auto eng =
-        cstn::Engine::create(tgt.arch, {.syntax = cstn::Syntax::Intel, .cpu = tgt.cpu, .features = tgt.features})
-            .unwrap();
+    auto info = pimpl->llvm_obj->get_info();
+    
+    cstn::Opts opts{};
+    cstn::Arch arch;
+    switch (info.arch) {
+        case Architecture::X86:
+        case Architecture::X86_64:
+            arch = cstn::Arch::x86_64; break;
+        case Architecture::Arm:
+            arch = cstn::Arch::arm; break;
+        case Architecture::Aarch64:
+            arch = cstn::Arch::aarch64; break;
+        default:
+            arch = cstn::Arch::x86_64; break;
+    }
+    
+    opts.cpu = info.is_64bit ? "x86-64" : "i386";
+    opts.features = "";
+    auto eng = cstn::Engine::create(arch, {.syntax = cstn::Syntax::Intel, .cpu = opts.cpu, .features = opts.features})
+                   .unwrap();
 
     std::vector<std::string> pat(seq.begin(), seq.end());
     std::vector<size_t> hits;
 
-    for (const auto &sec : pimpl->bin->sections()) {
-        const auto *elf  = dynamic_cast<const LIEF::ELF::Section *>(&sec);
-        const auto *pe   = dynamic_cast<const LIEF::PE::Section *>(&sec);
-        const auto *mach = dynamic_cast<const LIEF::MachO::Section *>(&sec);
-
-        bool exec =
-            (elf && elf->has(LIEF::ELF::ELF_SECTION_FLAGS::SHF_EXECINSTR)) ||
-            (pe && pe->has_characteristic(
-                       LIEF::PE::Section::CHARACTERISTICS::MEM_EXECUTE
-                   )) ||
-            (mach &&
-             mach->has(
-                 LIEF::MachO::MACHO_SECTION_FLAGS::S_ATTR_PURE_INSTRUCTIONS
-             ));
-
-        if (!exec)
+    auto sections = pimpl->llvm_obj->get_executable_sections();
+    for (const auto &sec : sections) {
+        if (!sec.executable || sec.data.empty())
             continue;
 
         auto il = eng.disassemble(
                          std::string_view(
-                             std::bit_cast<const char *>(sec.content().data()),
-                             sec.content().size()
+                             reinterpret_cast<const char *>(sec.data.data()),
+                             sec.data.size()
                          ),
-                         sec.virtual_address(),
+                         sec.address,
                          false
         )
                       .unwrap();
@@ -154,22 +144,17 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
     return hits;
 }
 
-bool Binary::position_independent() const { return pimpl->bin->is_pie(); }
-bool Binary::executable_stack() const { return pimpl->bin->has_nx(); }
+bool Binary::position_independent() const { 
+    return pimpl->llvm_obj->is_position_independent(); 
+}
+
+bool Binary::executable_stack() const { 
+    return pimpl->llvm_obj->has_executable_stack(); 
+}
 
 Architecture Binary::arch() const {
-    using A = LIEF::ARCHITECTURES;
-    switch (pimpl->bin->header().architecture()) {
-    case A::ARCH_X86:
-        return pimpl->bin->header().is_64() ? Architecture::X86_64
-                                            : Architecture::X86;
-    case A::ARCH_ARM:
-        return Architecture::Arm;
-    case A::ARCH_ARM64:
-        return Architecture::Aarch64;
-    default:
-        return Architecture::Other;
-    }
+    auto info = pimpl->llvm_obj->get_info();
+    return info.arch;
 }
 
 bool Binary::stack_canaries() const { return pimpl->has_canary; }
@@ -190,7 +175,7 @@ size_t Binary::set_address(size_t addr) {
 
 address_map &Binary::strings() const {
     if (!pimpl->strings_cache)
-        pimpl->strings_cache = extract_strings(*pimpl->bin);
+        pimpl->strings_cache = pimpl->llvm_obj->extract_strings();
     return *pimpl->strings_cache;
 }
 

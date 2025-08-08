@@ -1,4 +1,5 @@
 #include "bin_utils.hpp"
+#include "llvm_object_utils.hpp"
 #include <cornerstone/cornerstone.hpp>
 #include <fmt/format.h>
 #include <set>
@@ -17,42 +18,41 @@ bool is_gadget_end(const cstn::Instruction &insn) {
 }
 
 std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
-    constexpr size_t depth               = 13;
-    std::unique_ptr<LIEF::Binary> reader = LIEF::Parser::parse(path.string());
-    auto header                          = reader->header();
+    constexpr size_t depth = 13;
+    LLVMObjectFile obj(path);
+    auto info = obj.get_info();
+    
     cstn::Opts opts{};
-    auto tgt = make_cstn_target(
-        header.architecture(), header.modes(), header.endianness()
-    );
-    opts.cpu      = tgt.cpu;
-    opts.features = tgt.features;
-    auto eng      = cstn::Engine::create(tgt.arch, opts).unwrap();
+    // Convert LLVM Object info to cornerstone target
+    cstn::Arch arch;
+    switch (info.arch) {
+        case Architecture::X86:
+        case Architecture::X86_64:
+            arch = cstn::Arch::x86_64; break;
+        case Architecture::Arm:
+            arch = cstn::Arch::arm; break;
+        case Architecture::Aarch64:
+            arch = cstn::Arch::aarch64; break;
+        default:
+            arch = cstn::Arch::x86_64; break;
+    }
+    
+    opts.cpu = info.is_64bit ? "x86-64" : "i386";
+    opts.features = "";
+    auto eng = cstn::Engine::create(arch, opts).unwrap();
 
     std::vector<Gadget> gadgets;
     std::set<uint64_t> processed_addresses;
 
-    for (auto &section : reader->sections()) {
-        auto elf_sec = dynamic_cast<LIEF::ELF::Section *>(&section);
-        auto pe_sec  = dynamic_cast<LIEF::PE::Section *>(&section);
-        auto m_sec   = dynamic_cast<LIEF::MachO::Section *>(&section);
-        if ((elf_sec &&
-             elf_sec->has(LIEF::ELF::ELF_SECTION_FLAGS::SHF_EXECINSTR)) ||
-            (pe_sec && pe_sec->has_characteristic(
-                           LIEF::PE::Section::CHARACTERISTICS::MEM_EXECUTE
-                       )) ||
-            (m_sec &&
-             m_sec->has(
-                 LIEF::MachO::MACHO_SECTION_FLAGS::S_ATTR_PURE_INSTRUCTIONS
-             ))) {
+    auto sections = obj.get_executable_sections();
+    for (const auto &section : sections) {
+        if (section.executable && !section.data.empty()) {
             auto il = eng.disassemble(
                              std::string_view(
-                                 // NOLINTNEXTLINE
-                                 reinterpret_cast<const char *>(
-                                     section.content().data()
-                                 ),
-                                 section.size()
+                                 reinterpret_cast<const char *>(section.data.data()),
+                                 section.data.size()
                              ),
-                             section.virtual_address()
+                             section.address
             )
                           .unwrap();
             auto &insn = il.insns;
@@ -121,7 +121,8 @@ std::vector<size_t> find_rop_gadget(
         for (const auto &elem : insn)
             insn_asm.push_back(elem.assembly);
         auto res = std::search(
-            insn_asm.begin(), insn_asm.end(), split.begin(), split.end()
+            insn_asm.begin(), insn_asm.end(), split.begin(), split.end(),
+            [](const std::string& a, const std::string_view& b) { return a == b; }
         );
         size_t d = std::distance(insn_asm.begin(), res);
         if (d < insn.size())

@@ -1,4 +1,4 @@
-#include <LIEF/LIEF.hpp>
+#include "llvm_object_utils.hpp"
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <magic_enum.hpp>
@@ -10,106 +10,39 @@
 
 using opt_map = std::optional<address_map>;
 
-namespace {
-opt_map PLT = std::nullopt;
-
-opt_map GOT = std::nullopt;
-
-address_map populate_plt(const LIEF::ELF::Binary &binary) {
-    address_map plt;
-
-    const auto *plt_section = binary.get_section(".plt");
-    if (plt_section == nullptr) {
-        throw std::runtime_error(".plt section not found");
-    }
-
-    size_t index = 0;
-    for (const auto &relocation : binary.pltgot_relocations()) {
-        const auto *symbol = relocation.symbol();
-        if (symbol == nullptr) {
-            continue;
-        }
-
-        std::string name = symbol->name();
-        if (!name.empty()) {
-            uint64_t plt_address = plt_section->virtual_address() +
-                                   plt_section->entry_size() * (index + 1);
-            plt[name] = plt_address;
-        }
-        index++;
-    }
-
-    return plt;
-}
-
-address_map populate_got(const LIEF::ELF::Binary &binary) {
-    address_map got;
-    for (const auto &r : binary.pltgot_relocations()) {
-        auto s         = r.symbol();
-        got[s->name()] = r.address();
-    }
-
-    return got;
-}
-} // namespace
-
 namespace xcft {
 
 struct ELF::Impl {
-    LIEF::ELF::Binary *bin;
+    std::unique_ptr<LLVMObjectFile> obj;
     bool dynamic    = false;
     RelroType relro = RelroType::NoRelro;
-    explicit Impl(LIEF::ELF::Binary *bin_) : bin(bin_) {}
+    mutable opt_map plt_cache = std::nullopt;
+    mutable opt_map got_cache = std::nullopt;
+    
+    explicit Impl(const fs::path& path) : obj(std::make_unique<LLVMObjectFile>(path)) {}
+    
     void init() {
-        dynamic = !bin->dynamic_entries().empty() ||
-                  !bin->dynamic_symbols().empty() ||
-                  bin->has(LIEF::ELF::DYNAMIC_TAGS::DT_NEEDED);
-
-        bool has_relro_segment = false;
-        for (const auto &segment : bin->segments()) {
-            if (segment.type() == LIEF::ELF::SEGMENT_TYPES::PT_GNU_RELRO) {
-                has_relro_segment = true;
-                break;
-            }
-        }
-
-        bool has_bind_now = false;
-        for (const auto &entry : bin->dynamic_entries()) {
-            if (entry.tag() == LIEF::ELF::DYNAMIC_TAGS::DT_FLAGS) {
-                const auto &flags =
-                    dynamic_cast<const LIEF::ELF::DynamicEntryFlags &>(entry);
-                if (flags.has(LIEF::ELF::DYNAMIC_FLAGS::DF_BIND_NOW)) {
-                    has_bind_now = true;
-                    break;
-                }
-            } else if (entry.tag() == LIEF::ELF::DYNAMIC_TAGS::DT_FLAGS_1) {
-                const auto &flags =
-                    dynamic_cast<const LIEF::ELF::DynamicEntryFlags &>(entry);
-                if (flags.has(LIEF::ELF::DYNAMIC_FLAGS_1::DF_1_NOW)) {
-                    has_bind_now = true;
-                    break;
-                }
-            }
-        }
-
-        if (has_relro_segment) {
-            if (has_bind_now) {
-                relro = RelroType::FullRelro;
-            } else {
-                relro = RelroType::PartialRelro;
-            }
+        dynamic = obj->is_dynamically_linked();
+        
+        if (obj->has_full_relro()) {
+            relro = RelroType::FullRelro;
+        } else if (obj->has_relro()) {
+            relro = RelroType::PartialRelro;
+        } else {
+            relro = RelroType::NoRelro;
         }
     }
 };
 
-ELF::ELF(const fs::path &path)
-    : Binary(path),
-      pimpl(
-          std::make_shared<ELF::Impl>(dynamic_cast<LIEF::ELF::Binary *>(
-              static_cast<LIEF::Binary *>(Binary::bin())
-          ))
-      ) {
+ELF::ELF(const fs::path &p) : Binary(p) {
+    auto info = static_cast<LLVMObjectFile*>(bin())->get_info();
+    if (info.format != BinaryFormat::ELF) {
+        throw std::runtime_error("File is not an ELF binary");
+    }
+    
+    pimpl = std::make_shared<ELF::Impl>(p);
     pimpl->init();
+    
     fmt::println("Elf:             {}", fs::canonical(Binary::path()).string());
     fmt::println("Bits:            {}", static_cast<int>(bits()));
     fmt::println("Arch:            {}", magic_enum::enum_name(arch()));
@@ -143,28 +76,31 @@ ELF::ELF(const fs::path &path)
             ? fmt::styled("Full Relro   ", fmt::fg(fmt::color::green))
             : (relro() == RelroType::PartialRelro
                    ? fmt::styled("Partial Relro", fmt::fg(fmt::color::yellow))
-
                    : fmt::styled("No Relro     ", fmt::fg(fmt::color::red)))
     );
     fmt::println("");
 }
 
-RelroType ELF::relro() const { return pimpl->relro; }
-
-bool ELF::statically_linked() const { return !pimpl->dynamic; }
-
-address_map &ELF::got() const {
-    if (!GOT) {
-        GOT = populate_got(*pimpl->bin);
+address_map &ELF::plt() const {
+    if (!pimpl->plt_cache) {
+        pimpl->plt_cache = pimpl->obj->get_plt();
     }
-    return *GOT;
+    return *pimpl->plt_cache;
 }
 
-address_map &ELF::plt() const {
-    if (!PLT) {
-        PLT = populate_plt(*pimpl->bin);
+address_map &ELF::got() const {
+    if (!pimpl->got_cache) {
+        pimpl->got_cache = pimpl->obj->get_got();
     }
-    return *PLT;
+    return *pimpl->got_cache;
+}
+
+bool ELF::statically_linked() const {
+    return !pimpl->dynamic;
+}
+
+RelroType ELF::relro() const {
+    return pimpl->relro;
 }
 
 size_t ELF::set_address(size_t addr) {
@@ -177,4 +113,5 @@ size_t ELF::set_address(size_t addr) {
     }
     return Binary::set_address(addr);
 }
+
 } // namespace xcft

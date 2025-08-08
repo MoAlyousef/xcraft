@@ -1,5 +1,6 @@
 #include "bin_utils.hpp"
 #include "llvm_object_utils.hpp"
+#include <algorithm>
 #include <cornerstone/cornerstone.hpp>
 #include <fmt/format.h>
 #include <set>

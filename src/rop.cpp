@@ -29,6 +29,7 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
     auto eng      = cstn::Engine::create(tgt.arch, opts).unwrap();
 
     std::vector<Gadget> gadgets;
+    std::set<uint64_t> processed_addresses;
 
     for (auto &section : reader->sections()) {
         auto elf_sec = dynamic_cast<LIEF::ELF::Section *>(&section);
@@ -56,16 +57,26 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
                           .unwrap();
             auto &insn = il.insns;
             if (!insn.empty()) {
+                // Find all gadget-ending instructions
                 for (size_t i = 0; i < insn.size(); i++) {
-                    if (std::string_view(insn[i].mnemonic) == "ret") {
+                    if (is_gadget_end(insn[i]) && 
+                        processed_addresses.find(insn[i].address) == processed_addresses.end()) {
+                        
+                        // Walk backwards to find the start of the gadget
                         size_t start = i;
-                        while (start > 0 && (insn[i].address -
-                                             insn[start].address) < depth) {
+                        while (start > 0 && 
+                               (insn[i].address - insn[start - 1].address) < depth) {
                             start--;
+                            // Stop if we encounter another gadget-ending instruction
+                            if (is_gadget_end(insn[start])) {
+                                start++;
+                                break;
+                            }
                         }
 
+                        // Build the single gadget from start to end
                         std::vector<Instruction> instructions;
-                        for (size_t j = start + 1; j <= i; j++) {
+                        for (size_t j = start; j <= i; j++) {
                             Instruction instruction;
                             instruction.address = insn[j].address;
                             instruction.bytes   = std::string(
@@ -81,11 +92,11 @@ std::vector<Gadget> extract_rop_gadgets(const fs::path &path) {
                                 instruction.assembly += insn[j].op_str;
                             }
                             instructions.push_back(instruction);
-
-                            if (is_gadget_end(insn[j])) {
-                                gadgets.push_back(Gadget{instructions});
-                                instructions.clear();
-                            }
+                            processed_addresses.insert(insn[j].address);
+                        }
+                        
+                        if (!instructions.empty()) {
+                            gadgets.push_back(Gadget{instructions});
                         }
                     }
                 }

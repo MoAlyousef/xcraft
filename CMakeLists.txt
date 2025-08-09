@@ -56,7 +56,8 @@ set(XCFT_HEADER_FILES
   include/xcraft/tube.hpp
   include/xcraft/utils.hpp
 )
-add_library(xcraft ${XCFT_LIB_FORM}
+
+set(XCFT_SOURCES
   src/utils.cpp 
   src/tube.cpp 
   src/binary.cpp 
@@ -69,12 +70,20 @@ add_library(xcraft ${XCFT_LIB_FORM}
   src/bin_utils.cpp
   src/llvm_object_utils.cpp)
 
+add_library(xcraft ${XCFT_LIB_FORM})
+
+target_sources(xcraft
+    PRIVATE 
+      ${XCFT_SOURCES}
+  PUBLIC 
+      FILE_SET HEADERS
+      BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include
+      FILES ${XCFT_HEADER_FILES}
+)
+
+
 add_library(xcft::xcft ALIAS xcraft)
 target_compile_features(xcraft PUBLIC cxx_std_20)
-target_include_directories(xcraft PUBLIC 
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
-)
 target_include_directories(xcraft PRIVATE 
   ${asio_SOURCE_DIR}/asio/include
   ${subprocess_SOURCE_DIR}
@@ -89,14 +98,19 @@ target_link_libraries(xcraft PRIVATE
 if(MINGW)
   target_link_libraries(xcraft PUBLIC ws2_32)
 endif()
-set_target_properties(xcraft PROPERTIES VERSION ${XCFT_PROJECT_VERSION} PUBLIC_HEADER "${XCFT_HEADER_FILES}")
+set_target_properties(xcraft PROPERTIES VERSION ${XCFT_PROJECT_VERSION})
 
 include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
 
 write_basic_package_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake
   VERSION ${XCFT_PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/cmake/xcraft
 )
 
 if(XCFT_BUILD_SHARED)
@@ -105,7 +119,8 @@ if(XCFT_BUILD_SHARED)
     EXPORT xcraftConfig
     ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/xcraft
+    FILE_SET  HEADERS
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 
   export(
@@ -126,7 +141,8 @@ else()
     EXPORT xcraftConfig
     ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/xcraft
+    FILE_SET  HEADERS
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 
   export(
@@ -140,10 +156,6 @@ install(
   EXPORT xcraftConfig
   DESTINATION "${CMAKE_INSTALL_PREFIX}/share/cmake/xcraft"
   NAMESPACE xcft::
-)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/cmake/xcraft
 )
 
 if(XCFT_BUILD_EXAMPLES)

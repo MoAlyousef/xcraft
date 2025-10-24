@@ -11,12 +11,12 @@ class Tube {
     virtual ~Tube() = default;
 
     virtual void writeln(std::string_view msg) = 0;
-    virtual void write(std::string_view msg);
-    virtual void write(char msg);
-    virtual std::string readn(int n);
-    virtual std::string readln();
-    virtual std::string readall();
-    virtual void interactive();
+    virtual void write(std::string_view msg) = 0;
+    virtual void write(char msg) = 0;
+    virtual std::string readn(int n) = 0;
+    virtual std::string readln() = 0;
+    virtual std::string readall() = 0;
+    virtual void interactive() = 0;
 };
 
 class Process : public Tube {

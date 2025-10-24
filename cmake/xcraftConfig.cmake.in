@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+# No public dependencies; add find_dependency() here if needed later.
+
+include("${CMAKE_CURRENT_LIST_DIR}/xcraftTargets.cmake")
+

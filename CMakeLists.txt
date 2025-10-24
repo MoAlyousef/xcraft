@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.28)
 set(XCFT_PROJECT_VERSION 0.1.0)
 
 project(xcraft
@@ -103,59 +103,42 @@ set_target_properties(xcraft PROPERTIES VERSION ${XCFT_PROJECT_VERSION})
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
+set(xcraft_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/xcraft")
+
+install(
+  TARGETS xcraft
+  EXPORT xcraftTargets
+  FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(
+  EXPORT xcraftTargets
+  FILE xcraftTargets.cmake
+  NAMESPACE xcft::
+  DESTINATION "${xcraft_INSTALL_CMAKEDIR}"
+)
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_LIST_DIR}/cmake/xcraftConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfig.cmake"
+  INSTALL_DESTINATION "${xcraft_INSTALL_CMAKEDIR}"
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
 write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake
+  "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake"
   VERSION ${XCFT_PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
 )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/cmake/xcraft
-)
-
-if(XCFT_BUILD_SHARED)
-  install(
-    TARGETS xcraft
-    EXPORT xcraftConfig
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    FILE_SET  HEADERS
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-
-  export(
-    TARGETS xcraft
-    NAMESPACE xcft::
-    FILE "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfig.cmake"
-  )
-else()
-  install(
-    TARGETS fmt cornerstone
-    EXPORT xcraftConfig
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-  )
-
-  install(
-    TARGETS xcraft
-    EXPORT xcraftConfig
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-    FILE_SET  HEADERS
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
-
-  export(
-    TARGETS xcraft fmt cornerstone
-    NAMESPACE xcft::
-    FILE "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfig.cmake"
-  )
-endif()
-
 install(
-  EXPORT xcraftConfig
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/cmake/xcraft"
-  NAMESPACE xcft::
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/xcraftConfigVersion.cmake"
+  DESTINATION "${xcraft_INSTALL_CMAKEDIR}"
 )
 
 if(XCFT_BUILD_EXAMPLES)

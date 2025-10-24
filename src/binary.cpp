@@ -42,11 +42,12 @@ address_map extract_strings_from_section(
     return out;
 }
 
-// This function is no longer needed as LLVM Object wrapper handles string extraction
+// This function is no longer needed as LLVM Object wrapper handles string
+// extraction
 
 struct Binary::Impl {
     fs::path path;
-    std::unique_ptr<LLVMObjectFile> llvm_obj;   // LLVM Object wrapper
+    std::unique_ptr<LLVMObjectFile> llvm_obj; // LLVM Object wrapper
     Endian endian    = Endian::Little;
     Bits bits        = Bits::Bits64;
     bool has_canary  = false;
@@ -63,12 +64,13 @@ struct Binary::Impl {
 
         // Use LLVM Object for basic info
         auto info = llvm_obj->get_info();
-        bits = info.is_64bit ? Bits::Bits64 : Bits::Bits32;
-        endian = info.endianness == LLVMEndianness::Big ? Endian::Big : Endian::Little;
-        
+        bits      = info.is_64bit ? Bits::Bits64 : Bits::Bits32;
+        endian    = info.endianness == LLVMEndianness::Big ? Endian::Big
+                                                           : Endian::Little;
+
         // Use LLVM Object for symbols
         syms = llvm_obj->get_symbols();
-        
+
         // Check for stack canaries
         has_canary = llvm_obj->has_stack_canaries();
     }
@@ -84,24 +86,33 @@ address_map &Binary::symbols() const { return pimpl->syms; }
 std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
 ) {
     auto info = pimpl->llvm_obj->get_info();
-    
+
     cstn::Opts opts{};
     cstn::Arch arch;
     switch (info.arch) {
-        case Architecture::X86:
-        case Architecture::X86_64:
-            arch = cstn::Arch::x86_64; break;
-        case Architecture::Arm:
-            arch = cstn::Arch::arm; break;
-        case Architecture::Aarch64:
-            arch = cstn::Arch::aarch64; break;
-        default:
-            arch = cstn::Arch::x86_64; break;
+    case Architecture::X86:
+    case Architecture::X86_64:
+        arch = cstn::Arch::x86_64;
+        break;
+    case Architecture::Arm:
+        arch = cstn::Arch::arm;
+        break;
+    case Architecture::Aarch64:
+        arch = cstn::Arch::aarch64;
+        break;
+    default:
+        arch = cstn::Arch::x86_64;
+        break;
     }
-    
-    opts.cpu = info.is_64bit ? "x86-64" : "i386";
+
+    opts.cpu      = info.is_64bit ? "x86-64" : "i386";
     opts.features = "";
-    auto eng = cstn::Engine::create(arch, {.syntax = cstn::Syntax::Intel, .cpu = opts.cpu, .features = opts.features})
+    auto eng      = cstn::Engine::create(
+                   arch,
+                   {.syntax   = cstn::Syntax::Intel,
+                         .cpu      = opts.cpu,
+                         .features = opts.features}
+    )
                    .unwrap();
 
     std::vector<std::string> pat(seq.begin(), seq.end());
@@ -144,12 +155,12 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
     return hits;
 }
 
-bool Binary::position_independent() const { 
-    return pimpl->llvm_obj->is_position_independent(); 
+bool Binary::position_independent() const {
+    return pimpl->llvm_obj->is_position_independent();
 }
 
-bool Binary::executable_stack() const { 
-    return pimpl->llvm_obj->has_executable_stack(); 
+bool Binary::executable_stack() const {
+    return pimpl->llvm_obj->has_executable_stack();
 }
 
 Architecture Binary::arch() const {

@@ -306,7 +306,7 @@ void Remote::interactive() {
             asio::buffer(buf),
             [&, this](asio::error_code ec, std::size_t n) {
                 if (!ec && n) {
-                    std::cout.write(buf.data(), n);
+                    std::cout.write(buf.data(), static_cast<long>(n));
                     std::cout.flush();
                     start_read();
                 } else {

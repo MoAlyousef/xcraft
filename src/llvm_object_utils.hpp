@@ -2,10 +2,8 @@
 
 #include <memory>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
-#include <optional>
 #include <filesystem>
 #include <xcraft/enums.hpp>
 

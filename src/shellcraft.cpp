@@ -1,4 +1,3 @@
-#include <bit>
 #include <cornerstone/cornerstone.hpp>
 #include <cstring>
 #include <fmt/format.h>

@@ -4,7 +4,6 @@
 #include <magic_enum.hpp>
 #include <optional>
 #include <stdexcept>
-#include <string>
 #include <xcraft/elf.hpp>
 #include <xcraft/enums.hpp>
 

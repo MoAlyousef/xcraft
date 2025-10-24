@@ -2,8 +2,6 @@
 
 #include "llvm_object_utils.hpp"
 #include <cornerstone/cornerstone.hpp>
-#include <set>
-#include <utility>
 
 struct CstnTarget {
     cstn::Arch arch;      // cornerstone's coarse ISA enum

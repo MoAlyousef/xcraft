@@ -1,10 +1,8 @@
-#include "bin_utils.hpp"
 #include "llvm_object_utils.hpp"
 #include <bit>
 #include <cornerstone/cornerstone.hpp>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include <iostream>
 #include <magic_enum.hpp>
 #include <optional>
 #include <span>
@@ -88,7 +86,7 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
     auto info = pimpl->llvm_obj->get_info();
 
     cstn::Opts opts{};
-    cstn::Arch arch;
+    cstn::Arch arch{};
     switch (info.arch) {
     case Architecture::X86:
     case Architecture::X86_64:
@@ -125,6 +123,7 @@ std::vector<size_t> Binary::search(std::initializer_list<std::string_view> seq
 
         auto il = eng.disassemble(
                          std::string_view(
+                             // NOLINTNEXTLINE
                              reinterpret_cast<const char *>(sec.data.data()),
                              sec.data.size()
                          ),
